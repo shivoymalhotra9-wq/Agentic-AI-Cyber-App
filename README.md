@@ -38,7 +38,7 @@ An agentic AI system that automatically classifies suspicious emails, extracts i
 - Verdict: phishing
 - Threat Type: credential_harvester
 - Confidence: 0.98
-- URLs: (https://agentic-ai-cyber-app-6q4u3qtjzpbh9hiavt4yft.streamlit.app/)
+- URLs: https://agentic-ai-cyber-app-6q4u3qtjzpbh9hiavt4yft.streamlit.app/
 
 ## Contact
 
