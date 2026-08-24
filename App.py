@@ -6,7 +6,7 @@ from supabase import create_client, Client
 
 # ---------- Load secrets from environment ----------
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")       # use ANON key (safe for public)
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")       # ANON key (safe for public)
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -15,13 +15,10 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 st.set_page_config(page_title="Phishing Email Triage", layout="centered")
 st.title("🛡️ Phishing Email Triage")
 st.caption("Paste the email details below. Claude will classify the email and extract indicators of compromise.")
-
-# Privacy disclaimer
 st.info("🔒 For demo purposes only. Do not submit real personal or confidential emails. Data is sent to Claude API for analysis.")
-
 st.divider()
 
-# ---------- KPI Cards (optional) ----------
+# ---------- KPI Cards ----------
 try:
     total = supabase.table("phishing_emails").select("*", count="exact").execute().count
     phishing = supabase.table("phishing_emails").select("*", count="exact").eq("verdict", "phishing").execute().count
@@ -41,19 +38,29 @@ st.divider()
 # ---------- Email Input ----------
 st.subheader("📧 Email Details")
 
-col_from, col_to = st.columns(2)
-with col_from:
-    sender_input = st.text_input("From", placeholder="support@microsooft.com")
-with col_to:
-    recipient_input = st.text_input("To", placeholder="victim@company.com")
+# Let user choose input mode
+input_mode = st.radio("Choose input mode", ("Structured", "Raw Email"), horizontal=True)
 
-subject_input = st.text_input("Subject", placeholder="Your password will expire in 24 hours")
+if input_mode == "Structured":
+    col_from, col_to = st.columns(2)
+    with col_from:
+        sender_input = st.text_input("From", placeholder="support@microsooft.com")
+    with col_to:
+        recipient_input = st.text_input("To", placeholder="victim@company.com")
+    subject_input = st.text_input("Subject", placeholder="Your password will expire in 24 hours")
+    body_input = st.text_area("Email Body", height=250,
+        placeholder="Click here to verify your account immediately.\nhttps://login-microsooft.com/verify")
+else:
+    sender_input = ""
+    recipient_input = ""
+    subject_input = ""
+    body_input = st.text_area("Paste full raw email below", height=350,
+        placeholder="From: support@microsooft.com\nTo: victim@company.com\nSubject: Your password will expire in 24 hours\n\nClick here to verify your account immediately.\nhttps://login-microsooft.com/verify")
 
-body_input = st.text_area("Email Body", height=250,
-    placeholder="Click here to verify your account immediately.\nhttps://login-microsooft.com/verify")
-
-# Build full email text from fields
 def build_email_text(sender, recipient, subject, body):
+    # If raw mode, body contains the full email; otherwise build from fields
+    if input_mode == "Raw Email":
+        return body
     parts = []
     if sender:
         parts.append(f"From: {sender}")
@@ -111,7 +118,7 @@ Return raw JSON only. Do not wrap in markdown.""",
             except Exception:
                 result = {"verdict": "unknown", "reasoning": raw_clean}
 
-            # Display result in a nice format
+            # Display result
             st.success(f"**Verdict:** {result.get('verdict', 'unknown')}")
             st.write(f"**Threat Type:** {result.get('threat_type', 'unknown')}")
             st.write(f"**Confidence:** {result.get('confidence', 0)}")
