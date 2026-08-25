@@ -88,6 +88,7 @@ if st.button("Analyze Email"):
                 "model": "claude-haiku-4-5",
                 "max_tokens": 1500,
                 "system": """You are a senior SOC analyst. Given the raw email below, classify it and extract indicators of compromise.
+
 Return ONLY a valid JSON object with exactly these fields:
 verdict (phishing | legitimate | suspicious | spam),
 threat_type (credential_harvester | malware | BEC | vishing | other),
@@ -98,6 +99,17 @@ sender (string),
 subject (string),
 confidence (number from 0 to 1),
 reasoning (brief explanation).
+
+Special instructions:
+- Business Email Compromise (BEC) often has no malicious links. Look for:
+  * Urgent wire transfer or invoice payment requests.
+  * Executive or vendor impersonation.
+  * Requests to change payment details or payroll information.
+  * Confidentiality pressure ("do not discuss with others").
+  * Sender domain that differs slightly from the display name or known domain.
+- Legitimate emails usually come from internal domains or known vendors, have a calm tone, and do not ask for unusual financial actions.
+- If unsure between phishing and legitimate, choose "suspicious" and set confidence accordingly.
+
 If a field is missing, use "unknown" for strings, [] for arrays, and 0 for confidence.
 Return raw JSON only. Do not wrap in markdown.""",
                 "messages": [{"role": "user", "content": email_text}]
