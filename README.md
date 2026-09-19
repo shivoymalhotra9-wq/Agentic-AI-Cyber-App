@@ -439,11 +439,6 @@ Planned:
 
 This is a personal portfolio project, but feedback is welcome. Open an issue or connect on [LinkedIn](https://www.linkedin.com/in/shivoymalhotra/).
 
----
-
-## 📄 License
-
-MIT License — see [LICENSE](./LICENSE) for details.
 
 ---
 
