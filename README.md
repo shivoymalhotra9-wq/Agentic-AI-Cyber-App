@@ -411,12 +411,6 @@ This is a personal portfolio project, but feedback is welcome. Open an issue or 
 
 ---
 
-## 📄 License
-
-MIT License — see [LICENSE](./LICENSE) for details.
-
----
-
 ## 🙏 Acknowledgments
 
 - **Unsloth** — accessible fine-tuning on free GPUs
