@@ -1,0 +1,68 @@
+{
+  "name": "Agent - Extractor",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "email_text"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -320,
+        -368
+      ],
+      "id": "588677af-f05c-48c6-bc62-8a52c97b0632",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// EXTRACTOR AGENT\n// Takes raw email text and extracts structured fields\n// ============================================================\n\nconst emailText = $input.first().json.email_text || '';\n\n// Validate input — return safe defaults if empty\nif (!emailText || typeof emailText !== 'string') {\n  return [{\n    json: {\n      error: 'No email text provided',\n      sender: 'unknown',\n      sender_domain: 'unknown',\n      recipient: 'unknown',\n      subject: 'unknown',\n      body: '',\n      urls: [],\n      urgency_score: 0\n    }\n  }];\n}\n\n// ─── Extract sender ───\nlet sender = 'unknown';\nconst fromMatch = emailText.match(/From:\\s*([^\\n]+)/i);\nif (fromMatch) {\n  sender = fromMatch[1].trim();\n}\n\n// ─── Extract sender domain ───\nlet senderDomain = 'unknown';\nif (sender.includes('@')) {\n  senderDomain = sender.split('@').pop().toLowerCase().replace(/[>\\s]/g, '');\n}\n\n// ─── Extract recipient ───\nlet recipient = 'unknown';\nconst toMatch = emailText.match(/To:\\s*([^\\n]+)/i);\nif (toMatch) {\n  recipient = toMatch[1].trim();\n}\n\n// ─── Extract subject ───\nlet subject = 'unknown';\nconst subjectMatch = emailText.match(/Subject:\\s*([^\\n]+)/i);\nif (subjectMatch) {\n  subject = subjectMatch[1].trim();\n}\n\n// ─── Extract body ───\nlet body = emailText;\nif (emailText.includes('\\n\\n')) {\n  body = emailText.split('\\n\\n').slice(1).join('\\n\\n');\n}\n\n// ─── Extract URLs ───\nconst urls = emailText.match(/https?:\\/\\/[^\\s<>\"']+/g) || [];\n\n// ─── Urgency score ───\nconst urgencyKeywords = [\n  'urgent', 'immediately', 'asap', 'critical', 'time-sensitive',\n  'act now', 'expires', 'final notice', 'last chance'\n];\nconst urgencyHits = urgencyKeywords.filter(kw =>\n  emailText.toLowerCase().includes(kw)\n).length;\nconst urgencyScore = Math.min(urgencyHits / 3, 1.0);\n\n// ─── Return structured output ───\nreturn [{\n  json: {\n    sender: sender,\n    sender_domain: senderDomain,\n    recipient: recipient,\n    subject: subject,\n    body: body,\n    urls: urls,\n    urgency_score: Math.round(urgencyScore * 100) / 100,\n    email_text: emailText,\n    extracted_at: new Date().toISOString(),\n    url_count: urls.length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        -400
+      ],
+      "id": "03f7d1c7-6124-42f0-8d95-4ecabc4bbc40",
+      "name": "Extract Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Extract Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Fields": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7108ce33-b077-4e2b-912a-9b431e017481",
+  "meta": {
+    "instanceId": "2aa4ab9f4552a513c258ece8ebdf6f517af445b2da0b22c6e7bfd30e8db8f4d3"
+  },
+  "nodeGroups": [],
+  "id": "wNDkVM9IkBIj66dQ",
+  "tags": []
+}

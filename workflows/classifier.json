@@ -1,0 +1,427 @@
+{
+  "name": "Agent - Classifier",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst domain = data.sender_domain || 'unknown';\nconst supabaseUrl = 'https://zvqfidnukaphjkiqbryl.supabase.co';\n\nconst url = `${supabaseUrl}/rest/v1/senders?domain=eq.${encodeURIComponent(domain)}`;\n\nreturn [{\n  json: {\n    url: url,\n    email_text: data.email_text,\n    sender: data.sender,\n    sender_domain: domain,\n    recipient: data.recipient,\n    urgency_score: data.urgency_score\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        1488
+      ],
+      "id": "3fb332d0-d4a2-4c2b-93ac-16d1ef4dced6",
+      "name": "Build Sender URL1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_KEY_HERE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -1488,
+        1744
+      ],
+      "id": "f59b5738-c830-4907-b10e-e66e90b95728",
+      "name": "Check Sender1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $('Check Sender1').all();\nconst data = $('Build Sender URL1').first().json;\n\nconst hasData = items.length > 0 && items[0].json && Object.keys(items[0].json).length > 0;\n\nreturn [{\n  json: {\n    found: hasData,\n    risk_notes: hasData ? (items[0].json.risk_notes || 'none') : null,\n    email_text: data.email_text,\n    sender: data.sender,\n    sender_domain: data.sender_domain,\n    recipient: data.recipient,\n    urgency_score: data.urgency_score\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1184,
+        1696
+      ],
+      "id": "e9c7dd7b-34f0-4039-8fe6-080dab5cbba6",
+      "name": "Ensure Array1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst sender = data.sender || 'unknown';\nconst recipient = data.recipient || 'unknown';\n\nconst url = `https://zvqfidnukaphjkiqbryl.supabase.co/rest/v1/interactions?sender=eq.${encodeURIComponent(sender)}&recipient=eq.${encodeURIComponent(recipient)}`;\n\nreturn [{\n  json: {\n    url: url,\n    email_text: data.email_text,\n    sender: sender,\n    sender_domain: data.sender_domain,\n    recipient: recipient,\n    urgency_score: data.urgency_score\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        1488
+      ],
+      "id": "5febb3ff-673e-4c31-8140-79f0a69cd127",
+      "name": "Build Interactions URL1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_KEY_HERE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -480,
+        1504
+      ],
+      "id": "561cd8a7-51d8-442d-8ec2-8827445c0b89",
+      "name": "Check Interactions1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $('Check Interactions1').all();\nconst data = $('Build Interactions URL1').first().json;\n\nconst hasData = items.length > 0 && items[0].json && Object.keys(items[0].json).length > 0;\n\nreturn [{\n  json: {\n    found: hasData,\n    count: hasData ? items.length : 0,\n    request_types: hasData ? items.map(i => i.json.request_type || 'unknown') : [],\n    email_text: data.email_text,\n    sender: data.sender,\n    sender_domain: data.sender_domain,\n    recipient: data.recipient,\n    urgency_score: data.urgency_score\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        1488
+      ],
+      "id": "2a136074-53e9-4acd-89c9-75d61072b5dc",
+      "name": "Ensure Interactions Array1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const senderData = $('Ensure Array1').first().json;\nconst interactionData = $('Ensure Interactions Array1').first().json;\nconst data = $('Build Sender URL1').first().json;\n\nlet domainContext = senderData.found\n  ? `Sender domain \"${data.sender_domain}\" is known. Risk notes: ${senderData.risk_notes || 'none'}.`\n  : `Sender domain \"${data.sender_domain}\" is UNKNOWN. Treat with caution.`;\n\nlet interactionContext = !interactionData.found\n  ? `No previous interactions between this sender and recipient. This is a first-time contact.`\n  : `This sender has emailed this recipient ${interactionData.count} time(s) before. Typical request types: ${[...new Set(interactionData.request_types)].join(', ') || 'none'}.`;\n\nreturn [{\n  json: {\n    context: `${domainContext} ${interactionContext}`,\n    email_text: data.email_text,\n    sender: data.sender,\n    sender_domain: data.sender_domain,\n    recipient: data.recipient,\n    urgency_score: data.urgency_score\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        1088
+      ],
+      "id": "e1422a17-62b6-4eb3-b9f5-3d3fdad24f8f",
+      "name": "Build Grounding Context (Merged)1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.modelBody) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        384,
+        1488
+      ],
+      "id": "2a6b199e-a6ae-4365-a008-8098a210cf2c",
+      "name": "Call Open Model API"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json.response || '';\nconst text = response.toLowerCase();\n\nlet verdict = 'unknown';\nif (text.includes('verdict: malicious')) verdict = 'malicious';\nelse if (text.includes('verdict: safe')) verdict = 'safe';\nelse if (text.includes('malicious')) verdict = 'malicious';\nelse if (text.includes('safe')) verdict = 'safe';\n\nconst prev = $('BuildModelRequestBody').first().json;\n\nreturn [{\n  json: {\n    binary_verdict: verdict,\n    raw_response: response.substring(0, 500),\n    email_text: prev.email_text,\n    context: prev.context,\n    sender: prev.sender,\n    sender_domain: prev.sender_domain,\n    recipient: prev.recipient,\n    urgency_score: prev.urgency_score\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        1488
+      ],
+      "id": "d4e12091-ba2b-4f40-a15c-20eb56f600cb",
+      "name": "Parse Open Response1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst eb = d.email_text || '';\nconst cx = d.context || '';\nconst p = `### Instruction:\\nClassify this email as malicious or safe.\\n\\n### Context:\\n${cx}\\n\\n### Input:\\n${eb}\\n\\n### Response:`;\n\nreturn [{\n  json: {\n    email_text: eb,\n    context: cx,\n    sender: d.sender,\n    sender_domain: d.sender_domain,\n    recipient: d.recipient,\n    urgency_score: d.urgency_score,\n    modelBody: {\n      model: 'phishing-binary',\n      prompt: p,\n      stream: false\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        1152
+      ],
+      "id": "20e0e229-73f4-400a-a6c2-974dc575342d",
+      "name": "BuildModelRequestBody"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "YOUR_ANTHROPIC_KEY_HERE"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.claudeBody) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1040,
+        1488
+      ],
+      "id": "bc851c85-1a70-4d2a-984c-bfe15e7b4516",
+      "name": "Call Calude Judge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json.content?.[0]?.text || '';\nconst match = response.match(/\\{[\\s\\S]*\\}/);\n\nlet finalLabel = 'unknown';\nlet confidence = 0;\nlet reasoning = '';\n\ntry {\n  const parsed = JSON.parse(match ? match[0] : response);\n  finalLabel = parsed.label || 'unknown';\n  confidence = parsed.confidence || 0;\n  reasoning = parsed.reasoning || '';\n} catch (e) {\n  finalLabel = 'unknown';\n  reasoning = 'Parse failed: ' + response.substring(0, 200);\n}\n\nconst prev = $('BuildClaudeBody').first().json;\n\nreturn [{\n  json: {\n    verdict: finalLabel,\n    confidence: confidence,\n    reasoning: reasoning,\n    binary_verdict: prev.binary_verdict,\n    email_text: prev.email_text,\n    context: prev.context,\n    sender: prev.sender,\n    sender_domain: prev.sender_domain,\n    recipient: prev.recipient\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        1488
+      ],
+      "id": "92050f69-e302-42fd-b4b4-62ec18b86dee",
+      "name": "Parse Claude Response1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nconst promptText = `Classify this email.\n\nBinary verdict: ${data.binary_verdict}\n\nEmail:\n${data.email_text}\n\nPick ONE label:\n- bec: wire transfer, payment change, payroll update, gift cards, or impersonation\n- phishing: suspicious link or credential request\n- spam: promotional or marketing\n- legitimate: normal business email\n\nReturn ONLY JSON: {\"label\": \"your_label\", \"confidence\": 0.0-1.0, \"reasoning\": \"...\"}`;\n\nreturn [{\n  json: {\n    claudeBody: {\n      model: 'claude-haiku-4-5',\n      max_tokens: 200,\n      system: 'You are a phishing detection expert. Return only valid JSON.',\n      messages: [{ role: 'user', content: promptText }]\n    },\n    binary_verdict: data.binary_verdict,\n    email_text: data.email_text,\n    context: data.context,\n    sender: data.sender,\n    sender_domain: data.sender_domain,\n    recipient: data.recipient\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        1488
+      ],
+      "id": "15e9a4b1-84a2-442a-a841-acc714b43495",
+      "name": "BuildClaudeBody"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "email_text"
+            },
+            {
+              "name": "sender"
+            },
+            {
+              "name": "sender_domain"
+            },
+            {
+              "name": "recipient"
+            },
+            {
+              "name": "urgency_score",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1888,
+        1312
+      ],
+      "id": "8ad782e6-f7b4-467b-813b-428beba6fcb6",
+      "name": "When Executed by Another Workflow"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Build Sender URL1": {
+      "main": [
+        [
+          {
+            "node": "Check Sender1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Sender1": {
+      "main": [
+        [
+          {
+            "node": "Ensure Array1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure Array1": {
+      "main": [
+        [
+          {
+            "node": "Build Interactions URL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Interactions URL1": {
+      "main": [
+        [
+          {
+            "node": "Check Interactions1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Interactions1": {
+      "main": [
+        [
+          {
+            "node": "Ensure Interactions Array1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure Interactions Array1": {
+      "main": [
+        [
+          {
+            "node": "Build Grounding Context (Merged)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Grounding Context (Merged)1": {
+      "main": [
+        [
+          {
+            "node": "BuildModelRequestBody",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Open Model API": {
+      "main": [
+        [
+          {
+            "node": "Parse Open Response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Open Response1": {
+      "main": [
+        [
+          {
+            "node": "BuildClaudeBody",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BuildModelRequestBody": {
+      "main": [
+        [
+          {
+            "node": "Call Open Model API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Calude Judge": {
+      "main": [
+        [
+          {
+            "node": "Parse Claude Response1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Claude Response1": {
+      "main": [
+        []
+      ]
+    },
+    "BuildClaudeBody": {
+      "main": [
+        [
+          {
+            "node": "Call Calude Judge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Build Sender URL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "e1157cb1-79ab-4813-b781-1159a0334e86",
+  "meta": {
+    "instanceId": "2aa4ab9f4552a513c258ece8ebdf6f517af445b2da0b22c6e7bfd30e8db8f4d3"
+  },
+  "nodeGroups": [],
+  "id": "hxa9taApmdNU8rhI",
+  "tags": []
+}

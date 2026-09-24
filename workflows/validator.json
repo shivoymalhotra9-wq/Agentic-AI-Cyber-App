@@ -1,0 +1,79 @@
+{
+  "name": "Agent - Validator",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "verdict"
+            },
+            {
+              "name": "confidence",
+              "type": "number"
+            },
+            {
+              "name": "binary_verdict"
+            },
+            {
+              "name": "sender_domain"
+            },
+            {
+              "name": "context"
+            },
+            {
+              "name": "email_text"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bdd24da9-12f0-4aba-b92f-44b56d6f0f14",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// VALIDATOR AGENT (v2 — Tuned)\n// Cross-checks classifier verdict against grounding signals\n// ============================================================\n\nconst input = $input.first().json;\n\nconst verdict = input.verdict || 'unknown';\nconst confidence = input.confidence || 0;\nconst binaryVerdict = input.binary_verdict || 'unknown';\nconst context = input.context || '';\nconst senderDomain = input.sender_domain || 'unknown';\nconst emailText = input.email_text || '';\n\n// ─── Detect grounding signals from context ───\nconst domainKnown = context.includes('is known');\nconst hasInteractions = context.includes('has emailed this recipient');\nconst isFirstContact = context.includes('first-time contact');\n\n// ─── Initialize output ───\nlet validatedVerdict = verdict;\nlet trustScore = confidence;\nlet needsReview = false;\nlet validationNotes = [];\n\n// ─── Rule 1: Low confidence → flag for review ───\nif (confidence < 0.70) {\n  needsReview = true;\n  trustScore = confidence * 0.8;\n  validationNotes.push(`Low confidence (${confidence}) — flagged for review`);\n}\n\n// ─── Rule 2: Binary/judge mismatch → flag ───\nconst binarySaysMalicious = binaryVerdict === 'malicious';\nconst finalSaysMalicious = ['phishing', 'bec'].includes(verdict);\n\nif (binarySaysMalicious !== finalSaysMalicious) {\n  needsReview = true;\n  trustScore = trustScore * 0.7;\n  validationNotes.push(`Binary/judge mismatch: binary=${binaryVerdict}, judge=${verdict}`);\n}\n\n// ─── Rule 3 (TUNED): Malicious + known domain + history + LOW confidence → downgrade ───\nif (finalSaysMalicious && domainKnown && hasInteractions && confidence < 0.90) {\n  validatedVerdict = 'suspicious';\n  trustScore = trustScore * 0.85;\n  needsReview = true;\n  validationNotes.push(`Malicious verdict from known domain \"${senderDomain}\" with confidence ${confidence} — downgraded to suspicious`);\n}\nelse if (finalSaysMalicious && domainKnown && hasInteractions && confidence >= 0.90) {\n  // High-confidence malicious from known domain — still flag but keep verdict\n  needsReview = true;\n  validationNotes.push(`High-confidence malicious from known domain \"${senderDomain}\" — flagged for human review`);\n}\n\n// ─── Rule 4 (TUNED): Legitimate + unknown + first contact + LOW confidence → upgrade ───\nif (verdict === 'legitimate' && !domainKnown && isFirstContact && confidence < 0.85) {\n  validatedVerdict = 'suspicious';\n  trustScore = trustScore * 0.85;\n  needsReview = true;\n  validationNotes.push(`Legitimate verdict from unknown domain with confidence ${confidence} — upgraded to suspicious`);\n}\n\n// ─── Rule 5: High-confidence malicious from unknown domain → confirm ───\nif (finalSaysMalicious && !domainKnown && confidence > 0.85 && !needsReview) {\n  validationNotes.push(`High-confidence malicious from unknown domain — confirmed`);\n}\n\n// ─── Rule 6: High-confidence legitimate from known domain → confirm ───\nif (verdict === 'legitimate' && domainKnown && hasInteractions && confidence > 0.85) {\n  validationNotes.push(`High-confidence legitimate from known domain with history — confirmed`);\n}\n\n// ─── Default note if none triggered ───\nif (validationNotes.length === 0) {\n  validationNotes.push(`Verdict \"${verdict}\" accepted with confidence ${confidence}`);\n}\n\n// ─── Round trust score ───\ntrustScore = Math.round(trustScore * 100) / 100;\n\n// ─── Return final output ───\nreturn [{\n  json: {\n    final_verdict: validatedVerdict,\n    original_verdict: verdict,\n    confidence: confidence,\n    trust_score: trustScore,\n    needs_review: needsReview,\n    validation_notes: validationNotes,\n    binary_verdict: binaryVerdict,\n    sender_domain: senderDomain,\n    email_text: emailText,\n    context: context,\n    validated_at: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "bf7493f6-6621-4917-b667-20e74755955a",
+      "name": "Validate Verdict"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Validate Verdict",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "676bf849-c183-4cb9-a661-b59a92c8a914",
+  "meta": {
+    "instanceId": "2aa4ab9f4552a513c258ece8ebdf6f517af445b2da0b22c6e7bfd30e8db8f4d3"
+  },
+  "nodeGroups": [],
+  "id": "y1lF4bYGttlYheH9",
+  "tags": []
+}

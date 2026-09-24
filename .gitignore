@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+eval_env/
+phishing_env/
+
+# Environment
+.env
+.env.local
+*.env
+
+# Secrets
+*credentials*
+*secret*
+!*secret_example*
+
+# Data (large files)
+data/nazario/
+*.tar.gz
+*.zip
+
+# macOS
+.DS_Store
+._*
+
+# IDE
+.vscode/
+.idea/
+*.swp

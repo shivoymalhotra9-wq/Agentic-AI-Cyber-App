@@ -1,0 +1,314 @@
+{
+  "name": "Main - Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "phishing-detect",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a98e2599-8c19-4d11-93df-a63d048a82ff",
+      "name": "Webhook",
+      "webhookId": "04b7908a-cfaa-443c-9c74-1017d00c97de"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "wNDkVM9IkBIj66dQ",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/wNDkVM9IkBIj66dQ",
+          "cachedResultName": "Agent - Extractor"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email_text": "={{ $json.body.email_text }}"
+          },
+          "matchingColumns": [
+            "email_text"
+          ],
+          "schema": [
+            {
+              "id": "email_text",
+              "displayName": "email_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "e72f7c0a-27ca-48b5-8136-85804538f752",
+      "name": "Call 'Agent - Extractor'"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "hxa9taApmdNU8rhI",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/hxa9taApmdNU8rhI",
+          "cachedResultName": "Agent - Classifier"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email_text": "={{ $json.email_text }}",
+            "sender": "={{ $json.sender }}",
+            "sender_domain": "={{ $json.sender_domain }}",
+            "recipient": "={{ $json.recipient }}",
+            "urgency_score": "={{ $json.urgency_score }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "email_text",
+              "displayName": "email_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "sender",
+              "displayName": "sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "sender_domain",
+              "displayName": "sender_domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "recipient",
+              "displayName": "recipient",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "urgency_score",
+              "displayName": "urgency_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "5d216946-2476-4a90-b4b6-52f64cc13b02",
+      "name": "Call Classifier"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "y1lF4bYGttlYheH9",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/y1lF4bYGttlYheH9",
+          "cachedResultName": "Agent - Validator"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "verdict": "={{ $json.verdict }}",
+            "confidence": "={{ $json.confidence }}",
+            "binary_verdict": "={{ $json.binary_verdict }}",
+            "sender_domain": "={{ $json.sender_domain }}",
+            "context": "={{ $json.context }}",
+            "email_text": "={{ $json.email_text }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "verdict",
+              "displayName": "verdict",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "binary_verdict",
+              "displayName": "binary_verdict",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "sender_domain",
+              "displayName": "sender_domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "context",
+              "displayName": "context",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "email_text",
+              "displayName": "email_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "488687bb-e216-4ea7-b2f6-69f0e7acfe4a",
+      "name": "Agent - Validator"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  JSON.stringify({\n    final_verdict: $json.final_verdict,\n    original_verdict: $json.original_verdict,\n    confidence: $json.confidence,\n    trust_score: $json.trust_score,\n    needs_review: $json.needs_review,\n    validation_notes: $json.validation_notes,\n    binary_verdict: $json.binary_verdict,\n    sender_domain: $json.sender_domain\n  })\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        0
+      ],
+      "id": "089b07c9-4e4e-4ae9-b523-893497e92ae6",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Call 'Agent - Extractor'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Agent - Extractor'": {
+      "main": [
+        [
+          {
+            "node": "Call Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Classifier": {
+      "main": [
+        [
+          {
+            "node": "Agent - Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent - Validator": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d528197b-4141-4d60-a0d7-dc1be5d17194",
+  "meta": {
+    "instanceId": "2aa4ab9f4552a513c258ece8ebdf6f517af445b2da0b22c6e7bfd30e8db8f4d3"
+  },
+  "nodeGroups": [],
+  "id": "ghBsEu2o7Mmd4Diu",
+  "tags": []
+}
