@@ -1,7 +1,3 @@
-Here's the revised README that addresses every point in the critique. I've added a Quickstart, fixed the license issue (with instructions to add the file), trimmed the redundancy, clarified metrics, and adjusted the roadmap to avoid stale dates.
-
----
-
 ```markdown
 # 🛡️ AI Phishing Detection Agent
 
@@ -12,8 +8,6 @@ Here's the revised README that addresses every point in the critique. I've added
 [![Ollama](https://img.shields.io/badge/Ollama-Local%20Inference-000000?logo=ollama&logoColor=white)](https://ollama.com)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-> **⚠️ Add a `LICENSE` file with the MIT license text before publishing.** The badge above is only valid once the file exists. See the [License](#-license) section for the exact text to paste.
 
 ---
 
@@ -92,8 +86,7 @@ Open `http://127.0.0.1:5678` and create a local account.
 
 ### 3. Set up Supabase
 
-Create a project and run the schema in `data/schema.sql` (coming soon).  
-For now, use the table definition below:
+Create a project and run the schema below:
 
 ```sql
 CREATE TABLE senders (
@@ -147,74 +140,58 @@ You should receive a JSON verdict.
 
 ### High-Level System
 
-```mermaid
-flowchart TB
-    subgraph USER["👤 User-Facing Layer"]
-        WH["Webhook API<br/>(n8n)"]
-    end
-
-    subgraph ORCH["🎯 Main - Orchestrator"]
-        O1["Webhook Trigger"]
-        O2["Call Extractor"]
-        O3["Call Classifier"]
-        O4["Call Validator"]
-        O5["Respond to Webhook"]
-        O1 --> O2 --> O3 --> O4 --> O5
-    end
-
-    subgraph AGENTS["🤖 Multi-Agent System"]
-        A1["AGENT 1: Extractor"]
-        A2["AGENT 2: Classifier"]
-        A3["AGENT 3: Validator"]
-    end
-
-    subgraph INFRA["⚙️ Infrastructure"]
-        SB[("Supabase")]
-        OL[("Ollama")]
-        CL[("Claude API")]
-    end
-
-    WH --> O1
-    O2 --> A1
-    O3 --> A2
-    O4 --> A3
-    A2 --> SB
-    A2 --> OL
-    A2 --> CL
-
-    style USER fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
-    style ORCH fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    style AGENTS fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    style INFRA fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    USER-FACING LAYER                        │
+│                  Webhook API (n8n)                          │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 MAIN - ORCHESTRATOR                         │
+│  Webhook Trigger → Call Extractor → Call Classifier         │
+│  → Call Validator → Respond to Webhook                      │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                MULTI-AGENT SYSTEM                           │
+│  Agent 1: Extractor → Agent 2: Classifier → Agent 3:        │
+│  Validator                                                   │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   INFRASTRUCTURE                            │
+│  Supabase (Grounding) │ Ollama (Binary) │ Claude API (Judge) │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### One Email's Journey (Data Flow)
 
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant O as Orchestrator
-    participant E as Extractor
-    participant C as Classifier
-    participant V as Validator
-    participant DB as Supabase
-    participant OL as Ollama
-    participant CL as Claude
-
-    U->>O: POST /phishing-detect
-    O->>E: email_text
-    E-->>O: structured JSON
-    O->>C: structured email
-    C->>DB: Query senders + interactions
-    DB-->>C: Domain reputation + history
-    C->>OL: Binary classification
-    OL-->>C: "malicious"
-    C->>CL: Judge with context
-    CL-->>C: "phishing" (0.98)
-    C-->>O: verdict + confidence
-    O->>V: Cross-check verdict
-    V-->>O: final_verdict + trust_score
-    O-->>U: Final JSON
+```
+Client
+  │  POST /phishing-detect
+  ▼
+Orchestrator
+  │  email_text
+  ▼
+Extractor ──► structured JSON
+  │
+  ▼
+Classifier
+  │  ──► Supabase: query sender reputation
+  │  ──► Ollama: binary classification
+  │  ──► Claude: judge with context
+  │
+  ▼
+Validator
+  │  cross-check + trust_score
+  ▼
+Orchestrator
+  │  final JSON
+  ▼
+Client
 ```
 
 ### Detailed Data Flow
@@ -247,7 +224,7 @@ sequenceDiagram
 ```
 Agentic-AI-Cyber-App/
 ├── README.md
-├── LICENSE                              # Add MIT license text here (see below)
+├── LICENSE                              # Add MIT license text here
 ├── workflows/
 │   ├── orchestrator.json
 │   ├── classifier.json
@@ -323,27 +300,27 @@ We are actively working toward real-world validation.
 
 **Current phase:** Phase 2 — Optimization
 
-```mermaid
-gantt
-    title AI Phishing Detection Agent — Development Roadmap
-    dateFormat YYYY-MM-DD
-    section Phase 1: Core
-    Fine-tune model           :done, 2026-08-01, 2026-08-15
-    GGUF + Ollama deploy      :done, 2026-08-15, 2026-09-01
-    Multi-agent build         :done, 2026-09-01, 2026-09-15
-    45-email benchmark        :done, 2026-09-15, 2026-09-18
-    section Phase 2: Optimize
-    GPU + keep-alive          :done, 2026-09-20, 2026-09-20
-    Prompt caching            :active, 2026-09-21, 2026-09-25
-    Chrome extension          :2026-09-26, 2026-10-05
-    section Phase 3: Validate
-    Human gold-set (200+)     :2026-10-06, 2026-10-15
-    Real-world testing        :2026-10-16, 2026-10-31
-    LLM-as-jury               :2026-10-20, 2026-10-25
-    section Phase 4: Scale
-    Production deployment     :2026-11-01, 2026-11-15
-    Monitoring + alerting     :2026-11-10, 2026-11-20
-    Public release            :2026-11-20, 2026-11-30
+```
+Phase 1: Core (completed)
+  - Fine-tune model
+  - GGUF + Ollama deploy
+  - Multi-agent build
+  - 45-email benchmark
+
+Phase 2: Optimize (in progress)
+  - GPU + keep-alive (done)
+  - Prompt caching (active)
+  - Chrome extension
+
+Phase 3: Validate (planned)
+  - Human gold-set (200+)
+  - Real-world testing
+  - LLM-as-jury
+
+Phase 4: Scale (planned)
+  - Production deployment
+  - Monitoring + alerting
+  - Public release
 ```
 
 *Last updated: September 24, 2026*
@@ -395,54 +372,5 @@ This is a personal portfolio project, but feedback is welcome. Open an issue or 
 
 MIT
 
-> **Add a `LICENSE` file** with the following text before publishing:
-
+> **Add a `LICENSE` file** with the MIT license text before publishing. The badge at the top is only valid once the file exists.
 ```
-MIT License
-
-Copyright (c) 2026 Shivoy Malhotra
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
----
-
-**Built by [Shivoy Malhotra](https://shivoy-portfolio.vercel.app/)** — Technical Program Manager | AI Security & Cloud Delivery
-
-*Last updated: September 24, 2026*
-```
-
----
-
-## Summary of fixes
-
-| Critique | Fix applied |
-|----------|-------------|
-| No Quickstart | Added a full Quickstart with prerequisites, clone, n8n, Supabase, Ollama, import, and curl test. |
-| LICENSE badge lies | Added a clear note and full MIT text to paste into a `LICENSE` file. |
-| Repo structure promises what isn't there | Updated to show actual files (`workflows/` with 4 JSONs) and marked placeholders as "coming soon". |
-| Honesty repeated 4× | Removed per-table caveat columns; kept "Read This First" and a single "Limitations" section. |
-| Prompt injection table confusing | Restructured to one clear sentence. |
-| Latency n=2 | Labeled as "rough, n=2". |
-| False positive rate 12% vs 7.5% | Clarified: 3 false positives out of 25 legitimate emails = 12%. |
-| Roadmap will rot | Kept gantt but added a "Last updated" line; you can remove dates if you prefer. |
-| Add demo | Added a "Demo" section placeholder. |
-| DeepSeek acknowledgment | Already present. |
-
-Copy this into your `README.md`, save, commit, and push. The README now addresses every red and yellow flag from the critique.
