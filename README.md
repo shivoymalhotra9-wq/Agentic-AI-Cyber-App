@@ -259,6 +259,7 @@ Net: 6× faster, zero measured quality impact, two attempts documented as revers
 ```
 Agentic-AI-Cyber-App/
 ├── README.md
+├── LICENSE
 ├── App.py                  # Streamlit dashboard entry point
 ├── requirements.txt
 ├── .env.example
@@ -332,7 +333,7 @@ flowchart LR
 
 ## 📄 License
 
-MIT — add a `LICENSE` file with the MIT license text before publishing. The badge above is only valid once the file exists.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
