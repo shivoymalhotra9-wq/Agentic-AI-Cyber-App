@@ -141,24 +141,16 @@ flowchart TB
     A2 --> OL
     A2 --> CL
 
-    linkStyle default stroke:#37474f,stroke-width:2.5px
+    linkStyle default stroke:#424242,stroke-width:2px
 
-    style USER fill:#0277bd,stroke:#01579b,stroke-width:3px,color:#ffffff
-    style ORCH fill:#e65100,stroke:#bf360c,stroke-width:3px,color:#ffffff
-    style AGENTS fill:#6a1b9a,stroke:#4a148c,stroke-width:3px,color:#ffffff
-    style INFRA fill:#2e7d32,stroke:#1b5e20,stroke-width:3px,color:#ffffff
-    style WH fill:#b3e5fc,stroke:#01579b,stroke-width:2px,color:#06283d
-    style O1 fill:#ffe0b2,stroke:#bf360c,stroke-width:2px,color:#3a1c00
-    style O2 fill:#ffe0b2,stroke:#bf360c,stroke-width:2px,color:#3a1c00
-    style O3 fill:#ffe0b2,stroke:#bf360c,stroke-width:2px,color:#3a1c00
-    style O4 fill:#ffe0b2,stroke:#bf360c,stroke-width:2px,color:#3a1c00
-    style O5 fill:#ffe0b2,stroke:#bf360c,stroke-width:2px,color:#3a1c00
-    style A1 fill:#e1bee7,stroke:#4a148c,stroke-width:2px,color:#2a0a38
-    style A2 fill:#e1bee7,stroke:#4a148c,stroke-width:2px,color:#2a0a38
-    style A3 fill:#e1bee7,stroke:#4a148c,stroke-width:2px,color:#2a0a38
-    style SB fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px,color:#0d2812
-    style OL fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px,color:#0d2812
-    style CL fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px,color:#0d2812
+    style USER fill:#fafafa,stroke:#9e9e9e,stroke-width:2px,color:#212121
+    style ORCH fill:#fafafa,stroke:#9e9e9e,stroke-width:2px,color:#212121
+    style AGENTS fill:#fafafa,stroke:#9e9e9e,stroke-width:2px,color:#212121
+    style INFRA fill:#fafafa,stroke:#9e9e9e,stroke-width:2px,color:#212121
+    style WH fill:#ffffff,stroke:#757575,stroke-width:2px,color:#212121
+    style O1,O2,O3,O4,O5 fill:#ffffff,stroke:#757575,stroke-width:2px,color:#212121
+    style A1,A2,A3 fill:#ffffff,stroke:#757575,stroke-width:2px,color:#212121
+    style SB,OL,CL fill:#ffffff,stroke:#757575,stroke-width:2px,color:#212121
 ```
 
 ```mermaid
@@ -312,13 +304,10 @@ flowchart LR
     P3 --> P4["Phase 4<br/>Modern-era<br/>Real-world Validation<br/>📋 Planned"]
     P4 --> P5["Phase 5<br/>Public Release<br/>Monitoring<br/>📋 Planned"]
 
-    linkStyle default stroke:#37474f,stroke-width:3px
+    linkStyle default stroke:#424242,stroke-width:2px
 
-    style P1 fill:#2e7d32,stroke:#1b5e20,stroke-width:3px,color:#ffffff
-    style P2 fill:#2e7d32,stroke:#1b5e20,stroke-width:3px,color:#ffffff
-    style P3 fill:#2e7d32,stroke:#1b5e20,stroke-width:3px,color:#ffffff
-    style P4 fill:#f9a825,stroke:#e65100,stroke-width:3px,color:#3a2400
-    style P5 fill:#f9a825,stroke:#e65100,stroke-width:3px,color:#3a2400
+    style P1,P2,P3 fill:#eeeeee,stroke:#757575,stroke-width:2px,color:#212121
+    style P4,P5 fill:#ffffff,stroke:#9e9e9e,stroke-width:2px,stroke-dasharray:5 5,color:#616161
 ```
 
 | Phase | Status | Deliverable |
