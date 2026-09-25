@@ -109,37 +109,37 @@ Ran 200 real emails (100 phishing from a public 1999–2005 corpus + 100 legitim
 ```mermaid
 flowchart TB
     subgraph USER["👤 User-Facing Layer"]
-        WH["Webhook API<br/>(n8n)"]
+        WebhookAPI["Webhook API<br/>(n8n)"]
     end
 
     subgraph ORCH["🎯 Main - Orchestrator"]
-        O1["Webhook Trigger"]
-        O2["Call Extractor"]
-        O3["Call Classifier"]
-        O4["Call Validator"]
-        O5["Respond to Webhook"]
-        O1 --> O2 --> O3 --> O4 --> O5
+        Trigger["Webhook Trigger"]
+        CallExtractor["Call Extractor"]
+        CallClassifier["Call Classifier"]
+        CallValidator["Call Validator"]
+        Respond["Respond to Webhook"]
+        Trigger --> CallExtractor --> CallClassifier --> CallValidator --> Respond
     end
 
     subgraph AGENTS["🤖 Multi-Agent System"]
-        A1["AGENT 1: Extractor"]
-        A2["AGENT 2: Classifier"]
-        A3["AGENT 3: Validator"]
+        AgentExtractor["AGENT 1: Extractor"]
+        AgentClassifier["AGENT 2: Classifier"]
+        AgentValidator["AGENT 3: Validator"]
     end
 
     subgraph INFRA["⚙️ Infrastructure"]
-        SB[("Supabase<br/>Grounding")]
-        OL[("Ollama<br/>Binary Model")]
-        CL[("Claude API<br/>Judge")]
+        Supabase[("Supabase<br/>Grounding")]
+        Ollama[("Ollama<br/>Binary Model")]
+        ClaudeJudge[("Claude API<br/>Judge")]
     end
 
-    WH --> O1
-    O2 --> A1
-    O3 --> A2
-    O4 --> A3
-    A2 --> SB
-    A2 --> OL
-    A2 --> CL
+    WebhookAPI --> Trigger
+    CallExtractor --> AgentExtractor
+    CallClassifier --> AgentClassifier
+    CallValidator --> AgentValidator
+    AgentClassifier --> Supabase
+    AgentClassifier --> Ollama
+    AgentClassifier --> ClaudeJudge
 
     linkStyle default stroke:#424242,stroke-width:2px
 
@@ -147,10 +147,10 @@ flowchart TB
     style ORCH fill:#fafafa,stroke:#9e9e9e,stroke-width:2px,color:#212121
     style AGENTS fill:#fafafa,stroke:#9e9e9e,stroke-width:2px,color:#212121
     style INFRA fill:#fafafa,stroke:#9e9e9e,stroke-width:2px,color:#212121
-    style WH fill:#ffffff,stroke:#757575,stroke-width:2px,color:#212121
-    style O1,O2,O3,O4,O5 fill:#ffffff,stroke:#757575,stroke-width:2px,color:#212121
-    style A1,A2,A3 fill:#ffffff,stroke:#757575,stroke-width:2px,color:#212121
-    style SB,OL,CL fill:#ffffff,stroke:#757575,stroke-width:2px,color:#212121
+    style WebhookAPI fill:#ffffff,stroke:#757575,stroke-width:2px,color:#212121
+    style Trigger,CallExtractor,CallClassifier,CallValidator,Respond fill:#ffffff,stroke:#757575,stroke-width:2px,color:#212121
+    style AgentExtractor,AgentClassifier,AgentValidator fill:#ffffff,stroke:#757575,stroke-width:2px,color:#212121
+    style Supabase,Ollama,ClaudeJudge fill:#ffffff,stroke:#757575,stroke-width:2px,color:#212121
 ```
 
 ```mermaid
