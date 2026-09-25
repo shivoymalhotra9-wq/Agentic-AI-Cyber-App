@@ -2,7 +2,11 @@
 
 **A multi-agent AI system for email threat classification — combining a fine-tuned Llama 3.2 3B model, an LLM-as-jury architecture, and RAG-style grounding, orchestrated across 4 specialized n8n workflows.**
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue) ![n8n](https://img.shields.io/badge/n8n-Multi--Agent-FF6D5A) ![Ollama](https://img.shields.io/badge/Ollama-Fine--Tuned%20LLM-000000) ![Supabase](https://img.shields.io/badge/Supabase-Grounding-3ECF8E)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://python.org)
+[![n8n](https://img.shields.io/badge/n8n-Multi--Agent-FF6D5A?logo=n8n&logoColor=white)](https://n8n.io)
+[![Ollama](https://img.shields.io/badge/Ollama-Fine--Tuned%20LLM-000000?logo=ollama&logoColor=white)](https://ollama.com)
+[![Supabase](https://img.shields.io/badge/Supabase-Grounding-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
@@ -13,7 +17,7 @@
 > - **92.5–100% on synthetic benchmarks** (data generated to match the model's training distribution)
 > - **~25–56% recall/accuracy on a real-world 2000s-era phishing corpus**
 >
-> The gap between these numbers is the most important finding in this repo — a textbook case of **training/test domain shift**. Section 6 explains why it happened and what the fix would be. I chose to document this honestly rather than report only the flattering number.
+> The gap between these numbers is the most important finding in this repo — a textbook case of **training/test domain shift**. Section [Limitations](#-limitations--honest-findings) explains why it happened and what the fix would be. I chose to document this honestly rather than report only the flattering number.
 
 ---
 
@@ -62,7 +66,7 @@ cd Agentic-AI-Cyber-App
 
 ### 2. Pull the fine-tuned model into Ollama
 
-```
+```bash
 ollama create phishing-binary -f models/gguf/Modelfile
 ```
 
@@ -73,14 +77,14 @@ ollama create phishing-binary -f models/gguf/Modelfile
 
 ### 4. Configure environment
 
-```
+```bash
 cp .env.example .env
 # Fill in: SUPABASE_URL, SUPABASE_ANON_KEY, ANTHROPIC_API_KEY, (optional) GEMINI_API_KEY
 ```
 
 ### 5. Import the n8n workflows
 
-```
+```bash
 docker run -d --name n8n --restart unless-stopped -p 5678:5678 n8nio/n8n
 ```
 
@@ -88,7 +92,7 @@ In the n8n UI (`http://localhost:5678`), import the 4 workflow JSONs from `agent
 
 ### 6. Test it
 
-```
+```bash
 curl -X POST http://localhost:5678/webhook/phishing-detect \
   -H "Content-Type: application/json" \
   -d '{"email_text": "From: support@microsooft.com\nSubject: Verify your account\n\nClick here: https://login-microsooft.com/verify"}'
@@ -98,7 +102,91 @@ curl -X POST http://localhost:5678/webhook/phishing-detect \
 
 ## 🏗️ Architecture
 
-### Multi-Agent Pipeline
+### High-Level System (Colored Multi-Agent View)
+
+```mermaid
+flowchart TB
+    subgraph USER["👤 User-Facing Layer"]
+        WH["Webhook API<br/>(n8n)"]
+    end
+
+    subgraph ORCH["🎯 Main - Orchestrator"]
+        O1["Webhook Trigger"]
+        O2["Call Extractor"]
+        O3["Call Classifier"]
+        O4["Call Validator"]
+        O5["Respond to Webhook"]
+        O1 --> O2 --> O3 --> O4 --> O5
+    end
+
+    subgraph AGENTS["🤖 Multi-Agent System"]
+        A1["AGENT 1: Extractor"]
+        A2["AGENT 2: Classifier"]
+        A3["AGENT 3: Validator"]
+    end
+
+    subgraph INFRA["⚙️ Infrastructure"]
+        SB[("Supabase<br/>Grounding")]
+        OL[("Ollama<br/>Binary Model")]
+        CL[("Claude API<br/>Judge")]
+    end
+
+    WH --> O1
+    O2 --> A1
+    O3 --> A2
+    O4 --> A3
+    A2 --> SB
+    A2 --> OL
+    A2 --> CL
+
+    style USER fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
+    style ORCH fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style AGENTS fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style INFRA fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style WH fill:#bbdefb,stroke:#0288d1
+    style O1 fill:#ffe0b2,stroke:#f57c00
+    style O2 fill:#ffe0b2,stroke:#f57c00
+    style O3 fill:#ffe0b2,stroke:#f57c00
+    style O4 fill:#ffe0b2,stroke:#f57c00
+    style O5 fill:#ffe0b2,stroke:#f57c00
+    style A1 fill:#e1bee7,stroke:#7b1fa2
+    style A2 fill:#e1bee7,stroke:#7b1fa2
+    style A3 fill:#e1bee7,stroke:#7b1fa2
+    style SB fill:#c8e6c9,stroke:#388e3c
+    style OL fill:#c8e6c9,stroke:#388e3c
+    style CL fill:#c8e6c9,stroke:#388e3c
+```
+
+### One Email's Journey (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    participant U as Client
+    participant O as Orchestrator
+    participant E as Extractor
+    participant C as Classifier
+    participant V as Validator
+    participant DB as Supabase
+    participant OL as Ollama
+    participant CL as Claude
+
+    U->>O: POST /phishing-detect
+    O->>E: email_text
+    E-->>O: structured JSON
+    O->>C: structured email
+    C->>DB: Query senders + interactions
+    DB-->>C: Domain reputation + history
+    C->>OL: Binary classification
+    OL-->>C: "malicious"
+    C->>CL: Judge with context
+    CL-->>C: "phishing" (0.98)
+    C-->>O: verdict + confidence
+    O->>V: Cross-check verdict
+    V-->>O: final_verdict + trust_score
+    O-->>U: Final JSON
+```
+
+### Detailed Multi-Agent Pipeline (ASCII Fallback)
 
 ```
 Client → Webhook (Orchestrator)
@@ -284,11 +372,27 @@ Agentic-AI-Cyber-App/
 
 ## 🗺️ Roadmap
 
-- Phase 1: Core build — fine-tuned model, GGUF + Ollama, multi-agent architecture
-- Phase 2: Optimization — GPU/keep-alive shipped; caching & parallel-query attempts documented
-- Phase 3: Evaluation — synthetic ablation, hand-labeled gold set, LLM-as-jury, real-world corpus
-- Phase 4: Modern-era real-world validation (requires production-representative phishing samples)
-- Phase 5: Public release, monitoring, drift detection
+```mermaid
+flowchart LR
+    P1["Phase 1<br/>Core Build<br/>✅ Done"] --> P2["Phase 2<br/>Optimization<br/>✅ Done"]
+    P2 --> P3["Phase 3<br/>Evaluation<br/>✅ Done"]
+    P3 --> P4["Phase 4<br/>Modern-era<br/>Real-world Validation<br/>📋 Planned"]
+    P4 --> P5["Phase 5<br/>Public Release<br/>Monitoring<br/>📋 Planned"]
+
+    style P1 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
+    style P2 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
+    style P3 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
+    style P4 fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
+    style P5 fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
+```
+
+| Phase | Status | Key Deliverable |
+| --- | --- | --- |
+| Phase 1: Core Build | ✅ Done | Fine-tuned model, GGUF + Ollama, multi-agent architecture |
+| Phase 2: Optimization | ✅ Done | GPU/keep-alive shipped; caching & parallel-query attempts documented |
+| Phase 3: Evaluation | ✅ Done | Synthetic ablation, hand-labeled gold set, LLM-as-jury, real-world corpus |
+| Phase 4: Modern-era Validation | 📋 Planned | Real-world validation on production-representative phishing samples |
+| Phase 5: Public Release | 📋 Planned | Monitoring, drift detection, public launch |
 
 ---
 
@@ -296,9 +400,19 @@ Agentic-AI-Cyber-App/
 
 - **Unsloth** — accessible LoRA fine-tuning on free GPUs
 - **Anthropic** — Claude Haiku 4.5 (judge model)
+- **Google AI Studio** — Gemini Flash (jury experiment)
 - **Ollama** — local inference runtime
 - **n8n** — multi-agent workflow orchestration
 - **Supabase** — grounding infrastructure
+- **DeepSeek** — AI assistance for architecture, debugging, and documentation
+
+---
+
+## 📄 License
+
+MIT
+
+Add a LICENSE file with the MIT license text before publishing. The badge at the top is only valid once the file exists.
 
 ---
 
