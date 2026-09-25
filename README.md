@@ -1,4 +1,3 @@
-```markdown
 # 🛡️ AI Phishing Detection Agent
 
 **A multi-agent AI system for email threat classification — combining a fine-tuned Llama 3.2 3B model, an LLM-as-jury architecture, and RAG-style grounding, orchestrated across 4 specialized n8n workflows.**
@@ -10,6 +9,7 @@
 ## ⚠️ Read This First
 
 > This project reports **two very different accuracy numbers, on purpose.**
+>
 > - **92.5–100% on synthetic benchmarks** (data generated to match the model's training distribution)
 > - **~25–56% recall/accuracy on a real-world 2000s-era phishing corpus**
 >
@@ -46,6 +46,7 @@ A phishing/BEC/spam/legitimate email classifier built as a learning project to u
 ## 🚀 Quickstart
 
 ### Prerequisites
+
 - Docker Desktop (for n8n)
 - Python 3.10+
 - Ollama
@@ -53,35 +54,41 @@ A phishing/BEC/spam/legitimate email classifier built as a learning project to u
 - Anthropic API key (Claude); optional: Google AI Studio key (Gemini)
 
 ### 1. Clone the repo
+
 ```bash
 git clone https://github.com/shivoymalhotra9-wq/Agentic-AI-Cyber-App.git
 cd Agentic-AI-Cyber-App
 ```
 
 ### 2. Pull the fine-tuned model into Ollama
-```bash
+
+```
 ollama create phishing-binary -f models/gguf/Modelfile
 ```
 
 ### 3. Set up Supabase
+
 - Create a free project at [supabase.com](https://supabase.com)
 - Run `data/schema.sql` (creates `senders`, `interactions`, `gold_set`, `real_world_eval`)
 
 ### 4. Configure environment
-```bash
+
+```
 cp .env.example .env
 # Fill in: SUPABASE_URL, SUPABASE_ANON_KEY, ANTHROPIC_API_KEY, (optional) GEMINI_API_KEY
 ```
 
 ### 5. Import the n8n workflows
-```bash
+
+```
 docker run -d --name n8n --restart unless-stopped -p 5678:5678 n8nio/n8n
 ```
-In the n8n UI (`http://localhost:5678`), import the 4 workflow JSONs from `agents/`:
-`Agent - Extractor`, `Agent - Classifier`, `Agent - Validator`, `Main - Orchestrator`. Set credentials, activate only the Orchestrator.
+
+In the n8n UI (`http://localhost:5678`), import the 4 workflow JSONs from `agents/`: `Agent - Extractor`, `Agent - Classifier`, `Agent - Validator`, `Main - Orchestrator`. Set credentials, activate only the Orchestrator.
 
 ### 6. Test it
-```bash
+
+```
 curl -X POST http://localhost:5678/webhook/phishing-detect \
   -H "Content-Type: application/json" \
   -d '{"email_text": "From: support@microsooft.com\nSubject: Verify your account\n\nClick here: https://login-microsooft.com/verify"}'
@@ -126,6 +133,7 @@ Client → Webhook (Orchestrator)
 ### Grounding (Lightweight RAG)
 
 Two Supabase tables are queried on every email:
+
 - `senders` — known/unknown domain reputation
 - `interactions` — sender↔recipient history, request-type patterns
 
@@ -138,7 +146,7 @@ These are turned into a natural-language sentence and injected into the model's 
 ## 🎓 The Fine-Tuning Journey
 
 | Attempt | Approach | Result |
-|---|---|---|
+| --- | --- | --- |
 | 1 | 4-class, imbalanced data, no reasoning | 30% — model predicted "phishing" for everything |
 | 2 | 4-class, balanced + cleaned data | 30% — same failure mode |
 | 3 | Binary (malicious/safe), no reasoning | 60% — model still defaulted to majority class |
@@ -158,14 +166,17 @@ These are turned into a natural-language sentence and injected into the model's 
 Three layers of evaluation, from easiest to hardest:
 
 ### 1. Synthetic Ablation Study
+
 Tested 3 grounding configurations on the same 40-email eval set: no grounding (83.3% accuracy), static sender-domain grounding only (97.5%), and static + behavioral grounding (97.5%, no further gain but essential for BEC-from-trusted-domain scenarios). **Sender-domain grounding was the single biggest accuracy lever.**
 
 ### 2. Hand-Labeled Adversarial Gold Set
+
 30 emails across 6 deliberately hard categories (homoglyph domains, urgency-free BEC, legitimate-but-suspicious internal emails, spam resembling phishing, prompt injection, subtle phishing) — labeled by hand, not by an LLM. Single-judge agreement: 83.3%. The weakest category was spam-vs-phishing (40%) — the model over-flags aggressive marketing as phishing.
 
 **LLM-as-a-Jury experiment:** ran the same 30 emails through 3 independent judges (Claude Haiku, Gemini Flash, a local base Llama 3.2) with majority voting + a consensus score. Result: **96.67% agreement**, with spam-vs-phishing fixed to 100%. Caveat documented honestly: the local Llama judge errored/underperformed on ~50% of emails (20% accuracy), so the jury was effectively 2 judges most of the time — still enough to catch each other's false positives. Not integrated into the production n8n pipeline (added latency/complexity for a weak 3rd vote); documented as a future enhancement.
 
 ### 3. Real-World Corpus Test
+
 100 real phishing emails (public 1999–2005 corpus) + 100 real legitimate emails, run through the actual n8n pipeline (no grounding advantage, since none of these senders exist in the database). This is where the headline domain-shift finding came from (see below).
 
 ---
@@ -175,8 +186,9 @@ Tested 3 grounding configurations on the same 40-email eval set: no grounding (8
 This is the most valuable section of the project.
 
 ### The domain-shift finding
-| | Synthetic (2026-style phishing) | Real-world (1999–2005 corpus) |
-|---|---|---|
+
+|  | Synthetic (2026-style phishing) | Real-world (1999–2005 corpus) |
+| --- | --- | --- |
 | Recall | 100% | **25.3%** |
 | Precision | 95.65% | 82.76% |
 | Specificity (legit correctly cleared) | — | **95%** |
@@ -186,6 +198,7 @@ This is the most valuable section of the project.
 **What the fix would require:** retraining/augmenting with phishing samples that match the actual production-era threat distribution — which is why this was documented as a finding and limitation rather than "fixed" by retraining on the same old corpus (that would just move the mismatch, not remove it, and risks degrading modern-phishing recall for no product benefit).
 
 ### Other known limitations
+
 - Small evaluation sets (30–45 hand-labeled emails); not statistically powered
 - All synthetic training/eval data generated by Claude — may not reflect real attacker creativity
 - No SPF/DKIM/DMARC signal integration
@@ -197,7 +210,7 @@ This is the most valuable section of the project.
 ## 🛡️ Security (OWASP LLM Top 10)
 
 | Risk | Mitigation | Status |
-|---|---|---|
+| --- | --- | --- |
 | LLM01 Prompt Injection | Email body treated as untrusted data in the system prompt; separated from instructions | 5/5 adversarial test emails caught |
 | LLM02 Insecure Output Handling | Markdown-fence stripping, try/catch JSON parsing, field allowlisting, safe defaults | Verified |
 | LLM03 Training Data Poisoning | Synthetic data, manually reviewed, balanced labels | Verified |
@@ -216,7 +229,7 @@ This is the most valuable section of the project.
 I evaluated 5 possible optimizations and applied a strict rule: **only ship an optimization if it cannot change a verdict.**
 
 | Optimization | Category | Outcome |
-|---|---|---|
+| --- | --- | --- |
 | GPU acceleration + keep-alive | Zero quality risk | ✅ Shipped — **6x latency improvement** (30s → ~4s/email), $0 cost |
 | Prompt caching (40% cost savings) | Attempted | ❌ **Reverted** — Claude Haiku requires a 2,048-token minimum prompt to activate caching; expanding the prompt with few-shot examples to reach that threshold measurably dropped benchmark accuracy (92.5% → 92%). Not worth it. |
 | Parallel grounding queries | Attempted | ❌ **Reverted** — blocked by an n8n Merge-node timing issue; the ~0.3s savings didn't justify further debugging time given GPU already delivered the major win |
@@ -230,7 +243,7 @@ I evaluated 5 possible optimizations and applied a strict rule: **only ship an o
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
-|---|---|
+| --- | --- |
 | Fine-tuning | Unsloth + LoRA/QLoRA |
 | Base model | Llama 3.2 3B Instruct |
 | Local inference | Ollama + GGUF (Q4_K_M) |
@@ -253,9 +266,11 @@ Agentic-AI-Cyber-App/
 │   ├── validator.json
 │   └── orchestrator.json
 ├── models/
-│   ├── training/fine_tune_binary.py
-│   ├── training/training_data_reasoning.csv
-│   └── gguf/Modelfile
+│   ├── training/
+│   │   ├── fine_tune_binary.py
+│   │   └── training_data_reasoning.csv
+│   └── gguf/
+│       └── Modelfile
 ├── eval/
 │   ├── run_eval_multiagent.py
 │   ├── gold_set_runner.py
@@ -269,11 +284,11 @@ Agentic-AI-Cyber-App/
 
 ## 🗺️ Roadmap
 
-- [x] Phase 1: Core build — fine-tuned model, GGUF + Ollama, multi-agent architecture
-- [x] Phase 2: Optimization — GPU/keep-alive shipped; caching & parallel-query attempts documented
-- [x] Phase 3: Evaluation — synthetic ablation, hand-labeled gold set, LLM-as-jury, real-world corpus
-- [ ] Phase 4: Modern-era real-world validation (requires production-representative phishing samples)
-- [ ] Phase 5: Public release, monitoring, drift detection
+- Phase 1: Core build — fine-tuned model, GGUF + Ollama, multi-agent architecture
+- Phase 2: Optimization — GPU/keep-alive shipped; caching & parallel-query attempts documented
+- Phase 3: Evaluation — synthetic ablation, hand-labeled gold set, LLM-as-jury, real-world corpus
+- Phase 4: Modern-era real-world validation (requires production-representative phishing samples)
+- Phase 5: Public release, monitoring, drift detection
 
 ---
 
@@ -290,4 +305,3 @@ Agentic-AI-Cyber-App/
 **Built by Shivoy Malhotra** — Technical Program Manager | AI Security & Cloud Delivery
 
 *Last updated: September 24, 2026*
-```
