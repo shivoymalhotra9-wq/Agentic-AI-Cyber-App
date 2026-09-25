@@ -1,11 +1,11 @@
 # 🛡️ AI Phishing Detection Agent
 
-**A multi-agent AI system for email threat classification — combining a fine-tuned Llama 3.2 3B model, an LLM-as-jury architecture, and RAG-style grounding, orchestrated across 4 specialized n8n workflows.**
+**A multi-agent AI system that classifies emails as phishing, BEC, spam, or legitimate — built around a fine-tuned Llama 3.2 3B model, a Claude judge, and Supabase grounding, orchestrated in n8n.**
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![n8n](https://img.shields.io/badge/n8n-Multi--Agent-FF6D5A?logo=n8n&logoColor=white)](https://n8n.io)
 [![Ollama](https://img.shields.io/badge/Ollama-Fine--Tuned%20LLM-000000?logo=ollama&logoColor=white)](https://ollama.com)
 [![Supabase](https://img.shields.io/badge/Supabase-Grounding-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
+[![Claude](https://img.shields.io/badge/Claude-Judge-D97757?logo=anthropic&logoColor=white)](https://anthropic.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -14,95 +14,97 @@
 
 > This project reports **two very different accuracy numbers, on purpose.**
 >
-> - **92.5–100% on synthetic benchmarks** (data generated to match the model's training distribution)
-> - **~25–56% recall/accuracy on a real-world 2000s-era phishing corpus**
+> - **92.5–100% on synthetic benchmarks** (data matching the model's training distribution)
+> - **~56% accuracy / 25% recall on a real-world 2000s-era phishing corpus**
 >
-> The gap between these numbers is the most important finding in this repo — a textbook case of **training/test domain shift**. Section [Limitations](#-limitations--honest-findings) explains why it happened and what the fix would be. I chose to document this honestly rather than report only the flattering number.
+> The gap is the most important finding in this repo — a textbook **training/test domain shift**. It's documented in [Limitations](#️-limitations--honest-findings), not buried. I chose to report both numbers rather than only the flattering one.
 
 ---
 
 ## 🎯 What This Is
 
-A phishing/BEC/spam/legitimate email classifier built as a learning project to understand — end to end — how to fine-tune, evaluate, and productionize an LLM-based security tool. It combines:
+An end-to-end email threat classifier: raw email in, structured verdict out (`phishing` / `bec` / `spam` / `legitimate`, plus a trust score and a human-review flag). Four specialized n8n workflows handle extraction, classification, validation, and orchestration. A fine-tuned Llama 3.2 3B makes the binary malicious/safe call locally via Ollama; Claude Haiku 4.5 acts as judge for the final label; Supabase provides sender-reputation and interaction-history grounding on every email.
 
-- A **fine-tuned Llama 3.2 3B** (LoRA) for binary malicious/safe detection
-- **Claude Haiku 4.5** (and optionally Gemini + a base Llama) as a judge for the final 4-class label
-- **Supabase-based grounding** (sender reputation + interaction history) — a lightweight RAG pattern
-- A **4-workflow multi-agent architecture** in n8n (Extractor → Classifier → Validator → Orchestrator)
-- Rigorous, multi-layered evaluation: synthetic ablation studies, a hand-labeled adversarial gold set, an LLM-as-jury experiment, and a real-world corpus test
+*Built AI-assisted: I designed the architecture, ran every experiment, and debugged every failure documented below — implementation via n8n visual workflows (JSON) and Colab notebooks. Total hands-on build time: ~9.5 hours over 1–2 weeks.*
 
 ---
 
-## 🏆 Key Results (Reported Honestly, Not Selectively)
+## 🏆 Results
 
 | Evaluation | Dataset | Result |
 |---|---|---|
-| Synthetic benchmark (single-agent pipeline) | 45 emails (incl. 5 adversarial prompt-injection) | **100% exact match / 100% alert accuracy** |
-| Synthetic benchmark (4-agent pipeline) | 40 emails | **92.5% exact match, 97.5% alert accuracy, 100% recall, 0 false negatives** |
-| Hard adversarial gold set (single judge, hand-labeled) | 30 emails, 6 categories | **83.33% agreement** — spam-vs-phishing was the weak spot (40%) |
-| Hard adversarial gold set (LLM-as-jury: Claude + Gemini + Llama) | Same 30 emails | **96.67% agreement** (+13.3 pts) — spam-vs-phishing fixed to 100% |
-| **Real-world corpus (Nazario/SpamAssassin-era phishing)** | 200 real emails (100 phishing + 100 legitimate) | **~56.5% accuracy, 25.3% recall, 82.8% precision, 95% specificity** |
-
-**The headline finding:** the model is extremely conservative — it almost never flags a real legitimate email (95% specificity) but misses ~75% of real (though *old*, 1999–2005-era) phishing emails. Root cause: the fine-tuning data was 2026-style phishing (typosquats, credential harvest, BEC); the test corpus is early-2000s phishing (Nigerian-prince scams, pharma spam), which the model interprets as ordinary spam. This is a domain-shift problem, not a broken model — see [Limitations](#-limitations--honest-findings).
+| Single-pipeline benchmark | 45 emails (incl. 5 prompt-injection attacks) | **100% exact match, 100% alert accuracy** |
+| Multi-agent benchmark | 40 emails | **92.5% exact match, 97.5% alert accuracy, 100% recall, 0 false negatives** |
+| Adversarial gold set (single judge, hand-labeled) | 30 hard emails, 6 categories | **83.33% agreement** |
+| Adversarial gold set (LLM-as-jury: Claude + Gemini + Llama) | Same 30 emails | **96.67% agreement** |
+| Real-world corpus (1999–2005 phishing) | 200 real emails | **56.5% accuracy, 25.3% recall, 82.8% precision, 95% specificity** |
+| Prompt-injection resistance | 5 adversarial emails | **5/5 caught** |
+| Inference latency (after optimization) | Per email | **~4s** (down from ~30s, $0 added cost) |
+| Cost | Per email | **~$0.0002** (Claude judge only; everything else free/local) |
 
 ---
 
-## 🚀 Quickstart
+## 🔨 How It Was Built
 
-### Prerequisites
+### 1. MVP: n8n + Claude + Supabase
 
-- Docker Desktop (for n8n)
-- Python 3.10+
-- Ollama
-- Supabase account (free tier)
-- Anthropic API key (Claude); optional: Google AI Studio key (Gemini)
+Started with the simplest thing that could work: an n8n webhook receives an email, Claude classifies it, Supabase stores the result. Baseline on 10 emails: **50%**. The metric itself was wrong — `suspicious` counted as incorrect even though in production it should trigger an alert. Fixed the metric to measure *alert-worthiness*; accuracy went to ~70%.
 
-### 1. Clone the repo
+### 2. Grounding + ablation study
 
-```bash
-git clone https://github.com/shivoymalhotra9-wq/Agentic-AI-Cyber-App.git
-cd Agentic-AI-Cyber-App
-```
+Added two grounding signals, queried fresh on every email:
+- **Static:** sender-domain reputation (`senders` table)
+- **Behavioral:** sender↔recipient interaction history (`interactions` table) — catches BEC from trusted domains
 
-### 2. Pull the fine-tuned model into Ollama
+Then proved each component's value with an ablation study:
 
-```bash
-ollama create phishing-binary -f models/gguf/Modelfile
-```
+| Variant | Grounding | Accuracy | Precision | Recall |
+|---|---|---|---|---|
+| A | None | 83.3% | 73.7% | 100% |
+| B | Static only | **97.5%** | **95.7%** | 100% |
+| C | Static + behavioral | 97.5% | 95.7% | 100% |
 
-### 3. Set up Supabase
+**Finding:** sender-domain grounding was the single biggest lever (+14 pts). Behavioral grounding didn't move the number on this set but is the only signal that can catch BEC from a known domain — kept for that reason.
 
-- Create a free project at [supabase.com](https://supabase.com)
-- Run `data/schema.sql` (creates `senders`, `interactions`, `gold_set`, `real_world_eval`)
+### 3. Fine-tuning: four failures, then the breakthrough
 
-### 4. Configure environment
+Zero-shot Llama 3.2 3B scored 87.5% but missed phishing it should have caught. So I fine-tuned with LoRA (Unsloth, Colab T4, ~15 min). It failed four times before it worked:
 
-```bash
-cp .env.example .env
-# Fill in: SUPABASE_URL, SUPABASE_ANON_KEY, ANTHROPIC_API_KEY, (optional) GEMINI_API_KEY
-```
+| Attempt | Approach | Result |
+|---|---|---|
+| 1 | 4-class, imbalanced data | 30% — predicted "phishing" for everything |
+| 2 | 4-class, balanced + cleaned | 30% — same failure |
+| 3 | Binary (malicious/safe) | 60% — predicted "malicious" for everything |
+| 4 | **Binary + reasoning-before-verdict** | **100%** ✅ |
+| 5 | 4-class + reasoning | 30% — too complex for 3B on 419 examples |
+| 6 | Hybrid (binary gate + Ollama sub-classifier) | 66% — sub-classifier too weak |
 
-### 5. Import the n8n workflows
+**The breakthrough:** training the model to write a one-sentence reason *before* the verdict (`"This email appears malicious: suspicious sender domain, urgency. Verdict: malicious"`) forced it to analyze the input instead of defaulting to the majority class. One formatting change: 60% → 100%.
 
-```bash
-docker run -d --name n8n --restart unless-stopped -p 5678:5678 n8nio/n8n
-```
+Final config: LoRA rank 64, 419 examples → merged → GGUF Q4_K_M quant (6.4GB → 2GB) → served locally via Ollama. Since 4-class didn't respond to the same technique at this data scale, the 4-class label comes from a Claude Haiku judge — which also catches binary-model errors (defense in depth: on one benchmark email the binary model said `safe`, the judge correctly said `phishing`).
 
-In the n8n UI (`http://localhost:5678`), import the 4 workflow JSONs from `agents/`: `Agent - Extractor`, `Agent - Classifier`, `Agent - Validator`, `Main - Orchestrator`. Set credentials, activate only the Orchestrator.
+### 4. Multi-agent rebuild
 
-### 6. Test it
+Split the monolith into 4 n8n workflows — **Extractor → Classifier → Validator → Orchestrator**. The Validator cross-checks every verdict against grounding (6 rules; e.g. a "malicious" verdict on a known domain with history gets downgraded to `suspicious` for human review).
 
-```bash
-curl -X POST http://localhost:5678/webhook/phishing-detect \
-  -H "Content-Type: application/json" \
-  -d '{"email_text": "From: support@microsooft.com\nSubject: Verify your account\n\nClick here: https://login-microsooft.com/verify"}'
-```
+First benchmark run: **60% exact match**. Three bugs, all found and fixed:
+1. Stale test nodes with a hardcoded domain hitting the wrong Supabase rows
+2. Wrong auth header on the Supabase query (new key format)
+3. Validator Rule 3 too aggressive — downgraded nearly every malicious verdict
+
+After fixes: **92.5% exact match, 97.5% alert accuracy, 100% recall, zero false negatives** on 40 emails. The 4-agent pipeline scores slightly lower on exact match than the monolith *by design* — the Validator trades label precision for human-in-the-loop safety, which is the right tradeoff for a security product.
+
+### 5. LLM-as-jury experiment
+
+The hand-labeled 30-email gold set exposed one weak spot: spam-vs-phishing (40% agreement — aggressive marketing kept getting flagged as phishing). Ran three independent judges (Claude Haiku, Gemini Flash, local Llama) with majority vote: **96.67% agreement**, spam-vs-phishing fixed to 100%. Honest caveat: the local Llama judge errored on ~half the emails, so the jury was effectively two judges — still enough to catch each other's false positives. Not merged into the production pipeline (latency/complexity for a weak third vote); documented as a future enhancement.
+
+### 6. The real-world test (and the honest finding)
+
+Ran 200 real emails (100 phishing from a public 1999–2005 corpus + 100 legitimate) through the actual pipeline: **56.5% accuracy, 25.3% recall, 95% specificity**. The model almost never false-alarms on legitimate mail but misses ~75% of old phishing — because it was trained on 2026-style attacks (typosquats, credential harvest, BEC) and the test set is Nigerian-prince/pharma-spam era. Classic domain shift, documented as the headline finding rather than "fixed" by retraining on the old corpus (which would just move the mismatch, not remove it).
 
 ---
 
 ## 🏗️ Architecture
-
-### High-Level System (Colored Multi-Agent View)
 
 ```mermaid
 flowchart TB
@@ -159,8 +161,6 @@ flowchart TB
     style CL fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px,color:#0d2812
 ```
 
-### One Email's Journey (Sequence Diagram)
-
 ```mermaid
 sequenceDiagram
     participant U as Client
@@ -188,159 +188,69 @@ sequenceDiagram
     O-->>U: Final JSON
 ```
 
-### Detailed Multi-Agent Pipeline (ASCII Fallback)
-
-```
-Client → Webhook (Orchestrator)
-             │
-             ▼
-     ┌───────────────┐
-     │  EXTRACTOR    │  Regex-parses raw email → structured JSON
-     │               │  (sender, domain, recipient, URLs, urgency score)
-     └───────┬───────┘
-             ▼
-     ┌───────────────┐
-     │  CLASSIFIER   │  1. Query Supabase: sender reputation + interaction history
-     │               │  2. Build natural-language grounding context
-     │               │  3. Fine-tuned Llama 3.2 3B (Ollama) → binary verdict
-     │               │  4. Claude Haiku 4.5 (judge) → 4-class label + reasoning
-     └───────┬───────┘
-             ▼
-     ┌───────────────┐
-     │  VALIDATOR    │  6 rules cross-check the verdict against grounding:
-     │               │  - low confidence → flag for review
-     │               │  - binary/judge mismatch → flag
-     │               │  - malicious verdict + known domain + history → downgrade
-     │               │    to "suspicious" (catches BEC from trusted domains)
-     │               │  - outputs trust_score + needs_review
-     └───────┬───────┘
-             ▼
-     Final JSON response (final_verdict, trust_score, needs_review, reasoning)
-```
-
-**Why 4 agents instead of 1 workflow:** modularity, independent testability, reusability, and — most importantly — the Validator adds a defense-in-depth layer that a single monolithic pipeline doesn't have. This came at a measured cost: the 4-agent pipeline scored 92.5% exact match vs. 100% for the single-workflow version, because the Validator deliberately downgrades some high-confidence "malicious" verdicts to "suspicious" for human review. **Zero false negatives in both configurations** — the tradeoff sacrifices exact-match label accuracy for human-in-the-loop safety, which is the correct tradeoff for a security product.
-
-### Grounding (Lightweight RAG)
-
-Two Supabase tables are queried on every email:
-
-- `senders` — known/unknown domain reputation
-- `interactions` — sender↔recipient history, request-type patterns
-
-These are turned into a natural-language sentence and injected into the model's context — e.g. *"Sender domain 'company.com' is known. This sender has emailed this recipient 5 times before, typically about budget approvals."* The model is stateless; grounding is **fetched fresh on every call**, not learned or remembered.
-
-**Important finding:** Grounding is a *precision* tool (reduces false positives on known senders), not a *recall* tool. On a pure novel-phishing corpus (no senders in the database), grounding provides no signal — that's expected and correct, since "unknown sender" *is* the right read for a genuinely new attack.
-
----
-
-## 🎓 The Fine-Tuning Journey
-
-| Attempt | Approach | Result |
-| --- | --- | --- |
-| 1 | 4-class, imbalanced data, no reasoning | 30% — model predicted "phishing" for everything |
-| 2 | 4-class, balanced + cleaned data | 30% — same failure mode |
-| 3 | Binary (malicious/safe), no reasoning | 60% — model still defaulted to majority class |
-| 4 | **Binary + reasoning-before-verdict** | **100%** — breakthrough |
-| 5 | 4-class + reasoning (same technique) | 30% — task too complex for a 3B model on 419 examples |
-
-**The key insight:** training the model to generate a short reasoning sentence *before* the verdict (e.g. *"This email appears malicious: suspicious sender domain, urgency. Verdict: malicious"*) forces it to actually analyze the input token-by-token, instead of learning to always output the majority class. This single change took binary accuracy from 60% to 100%.
-
-- **Method:** LoRA fine-tuning (rank 64, ~97M trainable params — 3% of the 3.2B model) via Unsloth, on a free Colab T4 GPU, ~15 minutes.
-- **Deployment:** merged with the base model → converted to GGUF → quantized to Q4_K_M (6.4GB → 2GB) → registered as an Ollama model.
-- 4-class classification was ultimately handled by a Claude Haiku judge rather than by further fine-tuning, since the binary task saturated at 100% and the 4-class task did not respond to the same technique at this data scale.
+**Grounding (lightweight RAG):** two Supabase tables queried per email — `senders` (domain reputation) and `interactions` (sender↔recipient history) — rendered into a natural-language sentence injected into the model's context. The model is stateless; grounding is fetched fresh every call. It sharpens *precision* on known senders; on genuinely novel attacks "unknown sender" is itself the correct signal.
 
 ---
 
 ## 🧪 Evaluation Methodology
 
-Three layers of evaluation, from easiest to hardest:
-
-### 1. Synthetic Ablation Study
-
-Tested 3 grounding configurations on the same 40-email eval set: no grounding (83.3% accuracy), static sender-domain grounding only (97.5%), and static + behavioral grounding (97.5%, no further gain but essential for BEC-from-trusted-domain scenarios). **Sender-domain grounding was the single biggest accuracy lever.**
-
-### 2. Hand-Labeled Adversarial Gold Set
-
-30 emails across 6 deliberately hard categories (homoglyph domains, urgency-free BEC, legitimate-but-suspicious internal emails, spam resembling phishing, prompt injection, subtle phishing) — labeled by hand, not by an LLM. Single-judge agreement: 83.3%. The weakest category was spam-vs-phishing (40%) — the model over-flags aggressive marketing as phishing.
-
-**LLM-as-a-Jury experiment:** ran the same 30 emails through 3 independent judges (Claude Haiku, Gemini Flash, a local base Llama 3.2) with majority voting + a consensus score. Result: **96.67% agreement**, with spam-vs-phishing fixed to 100%. Caveat documented honestly: the local Llama judge errored/underperformed on ~50% of emails (20% accuracy), so the jury was effectively 2 judges most of the time — still enough to catch each other's false positives. Not integrated into the production n8n pipeline (added latency/complexity for a weak 3rd vote); documented as a future enhancement.
-
-### 3. Real-World Corpus Test
-
-100 real phishing emails (public 1999–2005 corpus) + 100 real legitimate emails, run through the actual n8n pipeline (no grounding advantage, since none of these senders exist in the database). This is where the headline domain-shift finding came from (see below).
+Three layers, easiest to hardest: **(1)** synthetic ablation study (40 emails, 3 grounding variants); **(2)** hand-labeled 30-email adversarial gold set across 6 hard categories (homoglyph domains, urgency-free BEC, legitimate-but-suspicious internal mail, spam resembling phishing, prompt injection, subtle phishing) — labeled by hand, never by an LLM; **(3)** real-world corpus test (200 emails, zero grounding advantage since none of the senders exist in the database). All benchmarks run through the actual n8n pipeline, not offline scripts. Eval harness and datasets live in `eval/`.
 
 ---
 
 ## ⚠️ Limitations & Honest Findings
 
-This is the most valuable section of the project.
-
-### The domain-shift finding
-
-|  | Synthetic (2026-style phishing) | Real-world (1999–2005 corpus) |
-| --- | --- | --- |
-| Recall | 100% | **25.3%** |
-| Precision | 95.65% | 82.76% |
-| Specificity (legit correctly cleared) | — | **95%** |
-
-**Root cause:** the model was fine-tuned exclusively on synthetic, modern phishing patterns (typosquatted domains, credential-harvest URLs, BEC wire-transfer language). Early-2000s phishing (Nigerian-prince scams, pharma spam) doesn't match those patterns and gets classified as ordinary spam. This is a classic **train/test distribution mismatch**, not a bug in the pipeline logic — the same architecture correctly clears 95% of real legitimate emails, showing the *precision* side of the system generalizes fine; it's *recall on out-of-distribution phishing* that fails.
-
-**What the fix would require:** retraining/augmenting with phishing samples that match the actual production-era threat distribution — which is why this was documented as a finding and limitation rather than "fixed" by retraining on the same old corpus (that would just move the mismatch, not remove it, and risks degrading modern-phishing recall for no product benefit).
-
-### Other known limitations
-
-- Small evaluation sets (30–45 hand-labeled emails); not statistically powered
-- All synthetic training/eval data generated by Claude — may not reflect real attacker creativity
-- No SPF/DKIM/DMARC signal integration
-- Local-only deployment, not load-tested
-- LLM-as-jury validated only on the synthetic gold set, not on the real-world corpus
+- **Domain shift is the headline finding** (see table in [How It Was Built](#6-the-real-world-test-and-the-honest-finding)): 100% recall on synthetic 2026-style phishing, 25% on a 1999–2005 corpus. The fix is training data matching the production threat distribution — not a pipeline bug.
+- Small hand-labeled sets (30–45 emails); not statistically powered.
+- All synthetic training/eval data LLM-generated — may not reflect real attacker creativity.
+- No SPF/DKIM/DMARC signals; local-only deployment, not load-tested.
+- LLM-as-jury validated on the synthetic gold set only, not on the real-world corpus.
 
 ---
 
 ## 🛡️ Security (OWASP LLM Top 10)
 
 | Risk | Mitigation | Status |
-| --- | --- | --- |
-| LLM01 Prompt Injection | Email body treated as untrusted data in the system prompt; separated from instructions | 5/5 adversarial test emails caught |
-| LLM02 Insecure Output Handling | Markdown-fence stripping, try/catch JSON parsing, field allowlisting, safe defaults | Verified |
+|---|---|---|
+| LLM01 Prompt Injection | Email body treated as untrusted data; separated from instructions | 5/5 adversarial tests caught |
+| LLM02 Insecure Output Handling | Fence stripping, guarded JSON parsing, field allowlisting, safe defaults | Verified |
 | LLM03 Training Data Poisoning | Synthetic data, manually reviewed, balanced labels | Verified |
-| LLM04 Model DoS | Rate limiting recommended at webhook layer | Documented |
-| LLM05 Supply Chain | Locked dependency versions (`pip freeze`) | Verified |
-| LLM06 Sensitive Info Disclosure | Synthetic data only, no real PII in training | Verified |
-| LLM07 Insecure Plugin Design | API keys in n8n credentials, not hardcoded | Verified |
-| LLM08 Excessive Agency | Model is classifier-only; no auto-quarantine; human review via `needs_review` flag | By design |
-| LLM09 Overreliance | Reasoning + trust_score surfaced, not just a label; Validator downgrades over-confident verdicts | By design |
+| LLM04 Model DoS | Rate limiting at webhook layer | Documented |
+| LLM05 Supply Chain | Locked dependency versions | Verified |
+| LLM06 Sensitive Info Disclosure | Synthetic data only — no real PII in training | Verified |
+| LLM07 Insecure Plugin Design | API keys in n8n credentials, never hardcoded | Verified |
+| LLM08 Excessive Agency | Classifier only — no auto-quarantine; `needs_review` flag for humans | By design |
+| LLM09 Overreliance | Reasoning + trust score surfaced, not just a label; Validator downgrades over-confident verdicts | By design |
 | LLM10 Model Theft | Model runs locally via Ollama; not publicly hosted | By design |
 
 ---
 
-## ⚡ Optimization: A Quality-First Tradeoff Story
+## ⚡ Performance: A Quality-First Tradeoff Story
 
-I evaluated 5 possible optimizations and applied a strict rule: **only ship an optimization if it cannot change a verdict.**
+One rule governed every optimization: **ship it only if it cannot change a verdict.**
 
-| Optimization | Category | Outcome |
-| --- | --- | --- |
-| GPU acceleration + keep-alive | Zero quality risk | ✅ Shipped — **6x latency improvement** (30s → ~4s/email), $0 cost |
-| Prompt caching (40% cost savings) | Attempted | ❌ **Reverted** — Claude Haiku requires a 2,048-token minimum prompt to activate caching; expanding the prompt with few-shot examples to reach that threshold measurably dropped benchmark accuracy (92.5% → 92%). Not worth it. |
-| Parallel grounding queries | Attempted | ❌ **Reverted** — blocked by an n8n Merge-node timing issue; the ~0.3s savings didn't justify further debugging time given GPU already delivered the major win |
-| Compressed judge output | Skipped | Unknown quality risk on a security product — not attempted |
-| Confidence-based routing (skip judge on high-confidence binary) | Skipped | Removes the defense-in-depth layer that catches binary-model errors — not attempted |
+| Optimization | Outcome |
+|---|---|
+| GPU inference + `OLLAMA_KEEP_ALIVE` | ✅ Shipped — **6× faster** (30s → ~4s/email), $0 cost |
+| Prompt caching (40% cost saving) | ❌ **Reverted** — Claude requires a 2,048-token minimum to activate caching; padding the prompt with few-shot examples dropped accuracy 92.5% → 92%. Not worth it. |
+| Parallel grounding queries | ❌ **Reverted** — blocked by an n8n Merge-node timing quirk; ~0.3s saving didn't justify more debugging after the GPU win |
+| Compressed judge output / confidence routing | Skipped — unknown or negative quality risk on a security product |
 
-**Net result:** 6x faster with zero measured quality impact. Two optimizations were tried and explicitly reverted when they threatened accuracy or hit tooling limits that weren't worth further time — documented as decisions, not failures.
+Net: 6× faster, zero measured quality impact, two attempts documented as reversions — decisions, not failures.
 
 ---
 
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
-| --- | --- |
-| Fine-tuning | Unsloth + LoRA/QLoRA |
-| Base model | Llama 3.2 3B Instruct |
+|---|---|
+| Orchestration | n8n (self-hosted, 4 JSON workflows) |
+| Binary classifier | Llama 3.2 3B, LoRA-fine-tuned (Unsloth, Colab T4) |
 | Local inference | Ollama + GGUF (Q4_K_M) |
-| Judge LLM(s) | Claude Haiku 4.5 (production); Gemini 3.5 Flash-Lite + local Llama (jury experiment) |
-| Orchestration | n8n (self-hosted, 4-workflow multi-agent) |
-| Grounding | Supabase (PostgreSQL + REST API) |
-| Benchmarking | Python + pandas + scikit-learn |
+| Judge | Claude Haiku 4.5 (Gemini Flash + local Llama in jury experiment) |
+| Grounding | Supabase (PostgreSQL + REST) |
+| Eval harness | Python (pandas, scikit-learn) |
+| Dashboard | Streamlit |
 
 ---
 
@@ -349,25 +259,45 @@ I evaluated 5 possible optimizations and applied a strict rule: **only ship an o
 ```
 Agentic-AI-Cyber-App/
 ├── README.md
-├── LICENSE
-├── agents/
-│   ├── extractor.json
-│   ├── classifier.json
-│   ├── validator.json
-│   └── orchestrator.json
+├── App.py                  # Streamlit dashboard entry point
+├── requirements.txt
+├── .env.example
+├── docs/                   # design notes, schemas, runbook
+├── eval/                   # benchmark + eval scripts (multi-agent, gold set, jury, real-world)
 ├── models/
-│   ├── training/
-│   │   ├── fine_tune_binary.py
-│   │   └── training_data_reasoning.csv
-│   └── gguf/
-│       └── Modelfile
-├── eval/
-│   ├── run_eval_multiagent.py
-│   ├── gold_set_runner.py
-│   ├── jury_eval.py
-│   └── real_world_eval.py
-└── data/
-    └── schema.sql
+│   └── training/           # fine-tuning script + training data
+├── streamlit/              # dashboard assets
+└── workflows/              # 4 n8n workflow JSONs: Extractor, Classifier, Validator, Orchestrator
+```
+
+---
+
+## 🚀 Quickstart
+
+**Prerequisites:** Docker Desktop, Ollama, a free Supabase project, an Anthropic API key (Claude). No Python needed to run the pipeline.
+
+```bash
+# 1. Clone
+git clone https://github.com/shivoymalhotra9-wq/Agentic-AI-Cyber-App.git
+cd Agentic-AI-Cyber-App
+
+# 2. Register the fine-tuned model with Ollama
+ollama create phishing-binary -f models/gguf/Modelfile
+
+# 3. Supabase: create a project, run the schema in docs/, note your URL + anon key
+
+# 4. Configure
+cp .env.example .env
+# fill in: SUPABASE_URL, SUPABASE_ANON_KEY, ANTHROPIC_API_KEY
+
+# 5. Start n8n and import the 4 workflows from workflows/
+docker run -d --name n8n --restart unless-stopped -p 5678:5678 n8nio/n8n
+# open http://localhost:5678 → import → set credentials → activate only the Orchestrator
+
+# 6. Test
+curl -X POST http://localhost:5678/webhook/phishing-detect \
+  -H "Content-Type: application/json" \
+  -d '{"email_text": "From: support@microsooft.com\nSubject: Verify your account\n\nClick here: https://login-microsooft.com/verify"}'
 ```
 
 ---
@@ -390,36 +320,22 @@ flowchart LR
     style P5 fill:#f9a825,stroke:#e65100,stroke-width:3px,color:#3a2400
 ```
 
-| Phase | Status | Key Deliverable |
-| --- | --- | --- |
-| Phase 1: Core Build | ✅ Done | Fine-tuned model, GGUF + Ollama, multi-agent architecture |
-| Phase 2: Optimization | ✅ Done | GPU/keep-alive shipped; caching & parallel-query attempts documented |
-| Phase 3: Evaluation | ✅ Done | Synthetic ablation, hand-labeled gold set, LLM-as-jury, real-world corpus |
-| Phase 4: Modern-era Validation | 📋 Planned | Real-world validation on production-representative phishing samples |
-| Phase 5: Public Release | 📋 Planned | Monitoring, drift detection, public launch |
-
----
-
-## 🙏 Acknowledgments
-
-- **Unsloth** — accessible LoRA fine-tuning on free GPUs
-- **Anthropic** — Claude Haiku 4.5 (judge model)
-- **Google AI Studio** — Gemini Flash (jury experiment)
-- **Ollama** — local inference runtime
-- **n8n** — multi-agent workflow orchestration
-- **Supabase** — grounding infrastructure
-- **DeepSeek** — AI assistance for architecture, debugging, and documentation
+| Phase | Status | Deliverable |
+|---|---|---|
+| 1. Core Build | ✅ Done | Fine-tuned model, Ollama deployment, multi-agent pipeline |
+| 2. Optimization | ✅ Done | 6× latency win; two reverted attempts documented |
+| 3. Evaluation | ✅ Done | Ablation study, gold set, LLM jury, real-world corpus |
+| 4. Modern-era Validation | 📋 Planned | Real-world validation on production-representative phishing |
+| 5. Public Release | 📋 Planned | Monitoring, drift detection, public launch |
 
 ---
 
 ## 📄 License
 
-MIT
-
-Add a LICENSE file with the MIT license text before publishing. The badge at the top is only valid once the file exists.
+MIT — add a `LICENSE` file with the MIT license text before publishing. The badge above is only valid once the file exists.
 
 ---
 
 **Built by Shivoy Malhotra** — Technical Program Manager | AI Security & Cloud Delivery
 
-*Last updated: September 24, 2026*
+*Last updated: September 25, 2026*
