@@ -1,23 +1,19 @@
+```markdown
 # 🛡️ AI Phishing Detection Agent
 
 **A multi-agent AI system for email threat classification — combining a fine-tuned Llama 3.2 3B model, an LLM-as-jury architecture, and RAG-style grounding, orchestrated across 4 specialized n8n workflows.**
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://python.org)
-[![n8n](https://img.shields.io/badge/n8n-Multi--Agent-FF6D5A?logo=n8n&logoColor=white)](https://n8n.io)
-[![Ollama](https://img.shields.io/badge/Ollama-Fine--Tuned%20LLM-000000?logo=ollama&logoColor=white)](https://ollama.com)
-[![Supabase](https://img.shields.io/badge/Supabase-Grounding-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Python](https://img.shields.io/badge/Python-3.10+-blue) ![n8n](https://img.shields.io/badge/n8n-Multi--Agent-FF6D5A) ![Ollama](https://img.shields.io/badge/Ollama-Fine--Tuned%20LLM-000000) ![Supabase](https://img.shields.io/badge/Supabase-Grounding-3ECF8E)
 
 ---
 
 ## ⚠️ Read This First
 
 > This project reports **two very different accuracy numbers, on purpose.**
->
 > - **92.5–100% on synthetic benchmarks** (data generated to match the model's training distribution)
 > - **~25–56% recall/accuracy on a real-world 2000s-era phishing corpus**
 >
-> The gap between these numbers is the most important finding in this repo — a textbook case of **training/test domain shift**. Section [Limitations](#-limitations--honest-findings) explains why it happened and what the fix would be. I chose to document this honestly rather than report only the flattering number.
+> The gap between these numbers is the most important finding in this repo — a textbook case of **training/test domain shift**. Section 6 explains why it happened and what the fix would be. I chose to document this honestly rather than report only the flattering number.
 
 ---
 
@@ -50,7 +46,6 @@ A phishing/BEC/spam/legitimate email classifier built as a learning project to u
 ## 🚀 Quickstart
 
 ### Prerequisites
-
 - Docker Desktop (for n8n)
 - Python 3.10+
 - Ollama
@@ -58,40 +53,34 @@ A phishing/BEC/spam/legitimate email classifier built as a learning project to u
 - Anthropic API key (Claude); optional: Google AI Studio key (Gemini)
 
 ### 1. Clone the repo
-
 ```bash
 git clone https://github.com/shivoymalhotra9-wq/Agentic-AI-Cyber-App.git
 cd Agentic-AI-Cyber-App
 ```
 
 ### 2. Pull the fine-tuned model into Ollama
-
 ```bash
 ollama create phishing-binary -f models/gguf/Modelfile
 ```
 
 ### 3. Set up Supabase
-
 - Create a free project at [supabase.com](https://supabase.com)
 - Run `data/schema.sql` (creates `senders`, `interactions`, `gold_set`, `real_world_eval`)
 
 ### 4. Configure environment
-
 ```bash
 cp .env.example .env
 # Fill in: SUPABASE_URL, SUPABASE_ANON_KEY, ANTHROPIC_API_KEY, (optional) GEMINI_API_KEY
 ```
 
 ### 5. Import the n8n workflows
-
 ```bash
 docker run -d --name n8n --restart unless-stopped -p 5678:5678 n8nio/n8n
 ```
-
-In the n8n UI (`http://localhost:5678`), import the 4 workflow JSONs from `agents/`: `Agent - Extractor`, `Agent - Classifier`, `Agent - Validator`, `Main - Orchestrator`. Set credentials, activate only the Orchestrator.
+In the n8n UI (`http://localhost:5678`), import the 4 workflow JSONs from `agents/`:
+`Agent - Extractor`, `Agent - Classifier`, `Agent - Validator`, `Main - Orchestrator`. Set credentials, activate only the Orchestrator.
 
 ### 6. Test it
-
 ```bash
 curl -X POST http://localhost:5678/webhook/phishing-detect \
   -H "Content-Type: application/json" \
@@ -102,91 +91,7 @@ curl -X POST http://localhost:5678/webhook/phishing-detect \
 
 ## 🏗️ Architecture
 
-### High-Level System (Colored Multi-Agent View)
-
-```mermaid
-flowchart TB
-    subgraph USER["👤 User-Facing Layer"]
-        WH["Webhook API<br/>(n8n)"]
-    end
-
-    subgraph ORCH["🎯 Main - Orchestrator"]
-        O1["Webhook Trigger"]
-        O2["Call Extractor"]
-        O3["Call Classifier"]
-        O4["Call Validator"]
-        O5["Respond to Webhook"]
-        O1 --> O2 --> O3 --> O4 --> O5
-    end
-
-    subgraph AGENTS["🤖 Multi-Agent System"]
-        A1["AGENT 1: Extractor"]
-        A2["AGENT 2: Classifier"]
-        A3["AGENT 3: Validator"]
-    end
-
-    subgraph INFRA["⚙️ Infrastructure"]
-        SB[("Supabase<br/>Grounding")]
-        OL[("Ollama<br/>Binary Model")]
-        CL[("Claude API<br/>Judge")]
-    end
-
-    WH --> O1
-    O2 --> A1
-    O3 --> A2
-    O4 --> A3
-    A2 --> SB
-    A2 --> OL
-    A2 --> CL
-
-    style USER fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
-    style ORCH fill:#fff3e0,stroke:#f57c00,stroke-width:2px
-    style AGENTS fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    style INFRA fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
-    style WH fill:#bbdefb,stroke:#0288d1
-    style O1 fill:#ffe0b2,stroke:#f57c00
-    style O2 fill:#ffe0b2,stroke:#f57c00
-    style O3 fill:#ffe0b2,stroke:#f57c00
-    style O4 fill:#ffe0b2,stroke:#f57c00
-    style O5 fill:#ffe0b2,stroke:#f57c00
-    style A1 fill:#e1bee7,stroke:#7b1fa2
-    style A2 fill:#e1bee7,stroke:#7b1fa2
-    style A3 fill:#e1bee7,stroke:#7b1fa2
-    style SB fill:#c8e6c9,stroke:#388e3c
-    style OL fill:#c8e6c9,stroke:#388e3c
-    style CL fill:#c8e6c9,stroke:#388e3c
-```
-
-### One Email's Journey (Sequence Diagram)
-
-```mermaid
-sequenceDiagram
-    participant U as Client
-    participant O as Orchestrator
-    participant E as Extractor
-    participant C as Classifier
-    participant V as Validator
-    participant DB as Supabase
-    participant OL as Ollama
-    participant CL as Claude
-
-    U->>O: POST /phishing-detect
-    O->>E: email_text
-    E-->>O: structured JSON
-    O->>C: structured email
-    C->>DB: Query senders + interactions
-    DB-->>C: Domain reputation + history
-    C->>OL: Binary classification
-    OL-->>C: "malicious"
-    C->>CL: Judge with context
-    CL-->>C: "phishing" (0.98)
-    C-->>O: verdict + confidence
-    O->>V: Cross-check verdict
-    V-->>O: final_verdict + trust_score
-    O-->>U: Final JSON
-```
-
-### Detailed Multi-Agent Pipeline (ASCII Fallback)
+### Multi-Agent Pipeline
 
 ```
 Client → Webhook (Orchestrator)
@@ -221,7 +126,6 @@ Client → Webhook (Orchestrator)
 ### Grounding (Lightweight RAG)
 
 Two Supabase tables are queried on every email:
-
 - `senders` — known/unknown domain reputation
 - `interactions` — sender↔recipient history, request-type patterns
 
@@ -234,7 +138,7 @@ These are turned into a natural-language sentence and injected into the model's 
 ## 🎓 The Fine-Tuning Journey
 
 | Attempt | Approach | Result |
-| --- | --- | --- |
+|---|---|---|
 | 1 | 4-class, imbalanced data, no reasoning | 30% — model predicted "phishing" for everything |
 | 2 | 4-class, balanced + cleaned data | 30% — same failure mode |
 | 3 | Binary (malicious/safe), no reasoning | 60% — model still defaulted to majority class |
@@ -254,17 +158,14 @@ These are turned into a natural-language sentence and injected into the model's 
 Three layers of evaluation, from easiest to hardest:
 
 ### 1. Synthetic Ablation Study
-
 Tested 3 grounding configurations on the same 40-email eval set: no grounding (83.3% accuracy), static sender-domain grounding only (97.5%), and static + behavioral grounding (97.5%, no further gain but essential for BEC-from-trusted-domain scenarios). **Sender-domain grounding was the single biggest accuracy lever.**
 
 ### 2. Hand-Labeled Adversarial Gold Set
-
 30 emails across 6 deliberately hard categories (homoglyph domains, urgency-free BEC, legitimate-but-suspicious internal emails, spam resembling phishing, prompt injection, subtle phishing) — labeled by hand, not by an LLM. Single-judge agreement: 83.3%. The weakest category was spam-vs-phishing (40%) — the model over-flags aggressive marketing as phishing.
 
 **LLM-as-a-Jury experiment:** ran the same 30 emails through 3 independent judges (Claude Haiku, Gemini Flash, a local base Llama 3.2) with majority voting + a consensus score. Result: **96.67% agreement**, with spam-vs-phishing fixed to 100%. Caveat documented honestly: the local Llama judge errored/underperformed on ~50% of emails (20% accuracy), so the jury was effectively 2 judges most of the time — still enough to catch each other's false positives. Not integrated into the production n8n pipeline (added latency/complexity for a weak 3rd vote); documented as a future enhancement.
 
 ### 3. Real-World Corpus Test
-
 100 real phishing emails (public 1999–2005 corpus) + 100 real legitimate emails, run through the actual n8n pipeline (no grounding advantage, since none of these senders exist in the database). This is where the headline domain-shift finding came from (see below).
 
 ---
@@ -274,9 +175,8 @@ Tested 3 grounding configurations on the same 40-email eval set: no grounding (8
 This is the most valuable section of the project.
 
 ### The domain-shift finding
-
-|  | Synthetic (2026-style phishing) | Real-world (1999–2005 corpus) |
-| --- | --- | --- |
+| | Synthetic (2026-style phishing) | Real-world (1999–2005 corpus) |
+|---|---|---|
 | Recall | 100% | **25.3%** |
 | Precision | 95.65% | 82.76% |
 | Specificity (legit correctly cleared) | — | **95%** |
@@ -286,7 +186,6 @@ This is the most valuable section of the project.
 **What the fix would require:** retraining/augmenting with phishing samples that match the actual production-era threat distribution — which is why this was documented as a finding and limitation rather than "fixed" by retraining on the same old corpus (that would just move the mismatch, not remove it, and risks degrading modern-phishing recall for no product benefit).
 
 ### Other known limitations
-
 - Small evaluation sets (30–45 hand-labeled emails); not statistically powered
 - All synthetic training/eval data generated by Claude — may not reflect real attacker creativity
 - No SPF/DKIM/DMARC signal integration
@@ -298,7 +197,7 @@ This is the most valuable section of the project.
 ## 🛡️ Security (OWASP LLM Top 10)
 
 | Risk | Mitigation | Status |
-| --- | --- | --- |
+|---|---|---|
 | LLM01 Prompt Injection | Email body treated as untrusted data in the system prompt; separated from instructions | 5/5 adversarial test emails caught |
 | LLM02 Insecure Output Handling | Markdown-fence stripping, try/catch JSON parsing, field allowlisting, safe defaults | Verified |
 | LLM03 Training Data Poisoning | Synthetic data, manually reviewed, balanced labels | Verified |
@@ -317,7 +216,7 @@ This is the most valuable section of the project.
 I evaluated 5 possible optimizations and applied a strict rule: **only ship an optimization if it cannot change a verdict.**
 
 | Optimization | Category | Outcome |
-| --- | --- | --- |
+|---|---|---|
 | GPU acceleration + keep-alive | Zero quality risk | ✅ Shipped — **6x latency improvement** (30s → ~4s/email), $0 cost |
 | Prompt caching (40% cost savings) | Attempted | ❌ **Reverted** — Claude Haiku requires a 2,048-token minimum prompt to activate caching; expanding the prompt with few-shot examples to reach that threshold measurably dropped benchmark accuracy (92.5% → 92%). Not worth it. |
 | Parallel grounding queries | Attempted | ❌ **Reverted** — blocked by an n8n Merge-node timing issue; the ~0.3s savings didn't justify further debugging time given GPU already delivered the major win |
@@ -331,7 +230,7 @@ I evaluated 5 possible optimizations and applied a strict rule: **only ship an o
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
-| --- | --- |
+|---|---|
 | Fine-tuning | Unsloth + LoRA/QLoRA |
 | Base model | Llama 3.2 3B Instruct |
 | Local inference | Ollama + GGUF (Q4_K_M) |
@@ -354,11 +253,9 @@ Agentic-AI-Cyber-App/
 │   ├── validator.json
 │   └── orchestrator.json
 ├── models/
-│   ├── training/
-│   │   ├── fine_tune_binary.py
-│   │   └── training_data_reasoning.csv
-│   └── gguf/
-│       └── Modelfile
+│   ├── training/fine_tune_binary.py
+│   ├── training/training_data_reasoning.csv
+│   └── gguf/Modelfile
 ├── eval/
 │   ├── run_eval_multiagent.py
 │   ├── gold_set_runner.py
@@ -372,27 +269,11 @@ Agentic-AI-Cyber-App/
 
 ## 🗺️ Roadmap
 
-```mermaid
-flowchart LR
-    P1["Phase 1<br/>Core Build<br/>✅ Done"] --> P2["Phase 2<br/>Optimization<br/>✅ Done"]
-    P2 --> P3["Phase 3<br/>Evaluation<br/>✅ Done"]
-    P3 --> P4["Phase 4<br/>Modern-era<br/>Real-world Validation<br/>📋 Planned"]
-    P4 --> P5["Phase 5<br/>Public Release<br/>Monitoring<br/>📋 Planned"]
-
-    style P1 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style P2 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style P3 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style P4 fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
-    style P5 fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
-```
-
-| Phase | Status | Key Deliverable |
-| --- | --- | --- |
-| Phase 1: Core Build | ✅ Done | Fine-tuned model, GGUF + Ollama, multi-agent architecture |
-| Phase 2: Optimization | ✅ Done | GPU/keep-alive shipped; caching & parallel-query attempts documented |
-| Phase 3: Evaluation | ✅ Done | Synthetic ablation, hand-labeled gold set, LLM-as-jury, real-world corpus |
-| Phase 4: Modern-era Validation | 📋 Planned | Real-world validation on production-representative phishing samples |
-| Phase 5: Public Release | 📋 Planned | Monitoring, drift detection, public launch |
+- [x] Phase 1: Core build — fine-tuned model, GGUF + Ollama, multi-agent architecture
+- [x] Phase 2: Optimization — GPU/keep-alive shipped; caching & parallel-query attempts documented
+- [x] Phase 3: Evaluation — synthetic ablation, hand-labeled gold set, LLM-as-jury, real-world corpus
+- [ ] Phase 4: Modern-era real-world validation (requires production-representative phishing samples)
+- [ ] Phase 5: Public release, monitoring, drift detection
 
 ---
 
@@ -400,22 +281,13 @@ flowchart LR
 
 - **Unsloth** — accessible LoRA fine-tuning on free GPUs
 - **Anthropic** — Claude Haiku 4.5 (judge model)
-- **Google AI Studio** — Gemini Flash (jury experiment)
 - **Ollama** — local inference runtime
 - **n8n** — multi-agent workflow orchestration
 - **Supabase** — grounding infrastructure
-- **DeepSeek** — AI assistance for architecture, debugging, and documentation
-
----
-
-## 📄 License
-
-MIT
-
-Add a LICENSE file with the MIT license text before publishing. The badge at the top is only valid once the file exists.
 
 ---
 
 **Built by Shivoy Malhotra** — Technical Program Manager | AI Security & Cloud Delivery
 
 *Last updated: September 24, 2026*
+```
