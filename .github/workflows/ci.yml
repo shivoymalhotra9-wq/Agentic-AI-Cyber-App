@@ -19,8 +19,13 @@ jobs:
         run: python3 -m compileall -q eval App.py && echo "python OK"
 
       - name: Requirements are pinned
-        run: >-
-          python3 -c "
-          import re, sys;
-          bad = [l.strip() for l in open('requirements.txt') if l.strip() and not l.startswith('#') and not re.match(r'^[A-Za-z0-9_.\-]+==[0-9]', l.strip())];
-          sys.exit(f'UNPINNED: {bad}') if bad else print('requirements pinned OK')"
+        run: |
+          python3 << 'EOF'
+          import re, sys
+          bad = [l.strip() for l in open('requirements.txt')
+                 if l.strip() and not l.startswith('#')
+                 and not re.match(r'^[A-Za-z0-9_.\-]+==[0-9]', l.strip())]
+          if bad:
+              sys.exit(f'UNPINNED: {bad}')
+          print('requirements pinned OK')
+          EOF
