@@ -1,4 +1,4 @@
-# 🛡️ AI Phishing Detection Agent
+# 🛡️ PhishSquad
 
 **A multi-agent AI system that classifies emails as phishing, BEC, spam, or legitimate — built around a fine-tuned Llama 3.2 3B model, a Claude judge, and Supabase grounding, orchestrated in n8n.**
 
@@ -14,9 +14,7 @@
 
 Watch the full pipeline catch a live phishing email — 104 seconds, narrated:
 
-<video src="assets/demo-video-final-cut.mp4" controls="controls" style="max-width: 100%;">
-  <a href="assets/demo-video-final-cut.mp4">Watch the demo video</a>
-</video>
+[![PhishSquad — live demo](https://img.youtube.com/vi/Hm9j8odaw1s/0.jpg)](https://www.youtube.com/watch?v=Hm9j8odaw1s)
 
 *The demo sends a fake PayPal phish (`paypa1-secure.com`) through the webhook — Extractor → Classifier (fine-tuned Llama 3.2) → Validator — and lands on **phishing, 99% confidence**, then walks through the honest benchmarks and roadmap below.*
 
@@ -263,7 +261,6 @@ Net: 6× faster, zero measured quality impact, two attempts documented as revers
 Agentic-AI-Cyber-App/
 ├── README.md
 ├── LICENSE
-├── assets/                 # demo video (demo-video-final-cut.mp4)
 ├── App.py                  # dashboard scaffold (WIP — not functional yet)
 ├── requirements.txt
 ├── .env.example
