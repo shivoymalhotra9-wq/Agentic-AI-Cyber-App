@@ -24,6 +24,10 @@ data/nazario/
 *.tar.gz
 *.zip
 
+# Model weights — never commit the 2GB GGUF
+*.gguf
+*.bin
+
 # macOS
 .DS_Store
 ._*
