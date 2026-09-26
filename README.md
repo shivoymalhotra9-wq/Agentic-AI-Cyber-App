@@ -24,7 +24,7 @@ Watch the full pipeline catch a live phishing email — 104 seconds, narrated:
 
 > This project reports **two very different accuracy numbers, on purpose.**
 >
-> - **92.5–100% on synthetic benchmarks** (data matching the model's training distribution)
+> - **92.5–100%**\* on synthetic benchmarks (data matching the model's training distribution)
 > - **~56% accuracy / 25% recall on a real-world 2000s-era phishing corpus**
 >
 > The gap is the most important finding in this repo — a textbook **training/test domain shift**. It's documented in [Limitations](#️-limitations--honest-findings), not buried. I chose to report both numbers rather than only the flattering one.
@@ -43,14 +43,16 @@ An end-to-end email threat classifier: raw email in, structured verdict out (`ph
 
 | Evaluation | Dataset | Result |
 |---|---|---|
-| Single-pipeline benchmark | 45 emails (incl. 5 prompt-injection attacks) | **100% exact match, 100% alert accuracy** |
-| Multi-agent benchmark | 40 emails | **92.5% exact match, 97.5% alert accuracy, 100% recall, 0 false negatives** |
+| Single-pipeline benchmark | 45 emails (incl. 5 prompt-injection attacks) | **100% exact match, 100% alert accuracy**\* |
+| Multi-agent benchmark | 40 emails | **92.5% exact match, 97.5% alert accuracy, 100% recall, 0 false negatives**\* |
 | Adversarial gold set (single judge, hand-labeled) | 30 hard emails, 6 categories | **83.33% agreement** |
 | Adversarial gold set (LLM-as-jury: Claude + Gemini + Llama) | Same 30 emails | **96.67% agreement** |
 | Real-world corpus (1999–2005 phishing) | 200 real emails | **56.5% accuracy, 25.3% recall, 82.8% precision, 95% specificity** |
-| Prompt-injection resistance | 5 adversarial emails | **5/5 caught** |
+| Prompt-injection resistance | 5 adversarial emails | **5/5 caught**\* |
 | Inference latency (after optimization) | Per email | **~4s** (down from ~30s; small-sample measurement, $0 added cost) |
 | Cost | Per email | **~$0.0002** (Claude judge only; everything else free/local) |
+
+\* *Small-data caveat: every 100% in this README was measured on 30–45 partly-synthetic emails — a strong directional signal, not a statistical proof. Treat the 200-email real-world result (56.5% accuracy) as the number with actual weight behind it.*
 
 ---
 
@@ -68,7 +70,7 @@ Added two grounding signals, queried fresh on every email:
 
 Then proved each component's value with an ablation study:
 
-| Variant | Grounding | Accuracy | Precision | Recall |
+| Variant | Grounding | Accuracy | Precision | Recall\* |
 |---|---|---|---|---|
 | A | None | 83.3% | 73.7% | 100% |
 | B | Static only | **97.5%** | **95.7%** | 100% |
@@ -85,11 +87,11 @@ Zero-shot Llama 3.2 3B scored 87.5% but missed phishing it should have caught. S
 | 1 | 4-class, imbalanced data | 30% — predicted "phishing" for everything |
 | 2 | 4-class, balanced + cleaned | 30% — same failure |
 | 3 | Binary (malicious/safe) | 60% — predicted "malicious" for everything |
-| 4 | **Binary + reasoning-before-verdict** | **100%** ✅ |
+| 4 | **Binary + reasoning-before-verdict** | **100%**\* ✅ |
 | 5 | 4-class + reasoning | 30% — too complex for 3B on 419 examples |
 | 6 | Hybrid (binary gate + Ollama sub-classifier) | 66% — sub-classifier too weak |
 
-**The breakthrough:** training the model to write a one-sentence reason *before* the verdict (`"This email appears malicious: suspicious sender domain, urgency. Verdict: malicious"`) forced it to analyze the input instead of defaulting to the majority class. One formatting change: 60% → 100%.
+**The breakthrough:** training the model to write a one-sentence reason *before* the verdict (`"This email appears malicious: suspicious sender domain, urgency. Verdict: malicious"`) forced it to analyze the input instead of defaulting to the majority class. One formatting change: 60% → 100%\*.
 
 Final config: LoRA rank 64, 419 examples → merged → GGUF Q4_K_M quant (6.4GB → 2GB) → served locally via Ollama. Since 4-class didn't respond to the same technique at this data scale, the 4-class label comes from a Claude Haiku judge — which also catches binary-model errors (defense in depth: on one benchmark email the binary model said `safe`, the judge correctly said `phishing`).
 
@@ -102,11 +104,11 @@ First benchmark run: **60% exact match**. Three bugs, all found and fixed:
 2. Wrong auth header on the Supabase query (new key format)
 3. Validator Rule 3 too aggressive — downgraded nearly every malicious verdict
 
-After fixes: **92.5% exact match, 97.5% alert accuracy, 100% recall, zero false negatives** on 40 emails. The 4-agent pipeline scores slightly lower on exact match than the monolith *by design* — the Validator trades label precision for human-in-the-loop safety, which is the right tradeoff for a security product.
+After fixes: **92.5% exact match, 97.5% alert accuracy, 100% recall, zero false negatives**\* on 40 emails. The 4-agent pipeline scores slightly lower on exact match than the monolith *by design* — the Validator trades label precision for human-in-the-loop safety, which is the right tradeoff for a security product.
 
 ### 5. LLM-as-jury experiment
 
-The hand-labeled 30-email gold set exposed one weak spot: spam-vs-phishing (40% agreement — aggressive marketing kept getting flagged as phishing). Ran three independent judges (Claude Haiku, Gemini Flash, local Llama) with majority vote: **96.67% agreement**, spam-vs-phishing fixed to 100%. Honest caveat: the local Llama judge errored on ~half the emails, so the jury was effectively two judges — still enough to catch each other's false positives. Not merged into the production pipeline (latency/complexity for a weak third vote); documented as a future enhancement.
+The hand-labeled 30-email gold set exposed one weak spot: spam-vs-phishing (40% agreement — aggressive marketing kept getting flagged as phishing). Ran three independent judges (Claude Haiku, Gemini Flash, local Llama) with majority vote: **96.67% agreement**, spam-vs-phishing fixed to 100%\*. Honest caveat: the local Llama judge errored on ~half the emails, so the jury was effectively two judges — still enough to catch each other's false positives. Not merged into the production pipeline (latency/complexity for a weak third vote); documented as a future enhancement.
 
 ### 6. The real-world test (and the honest finding)
 
@@ -202,7 +204,7 @@ Three layers, easiest to hardest: **(1)** synthetic ablation study (40 emails, 3
 
 ## ⚠️ Limitations & Honest Findings
 
-- **Domain shift is the headline finding** (see table in [How It Was Built](#6-the-real-world-test-and-the-honest-finding)): 100% recall on synthetic 2026-style phishing, 25% on a 1999–2005 corpus. The fix is training data matching the production threat distribution — not a pipeline bug.
+- **Domain shift is the headline finding** (see table in [How It Was Built](#6-the-real-world-test-and-the-honest-finding)): 100%\* recall on synthetic 2026-style phishing, 25% on a 1999–2005 corpus. The fix is training data matching the production threat distribution — not a pipeline bug.
 - Small hand-labeled sets (30–45 emails); not statistically powered.
 - All synthetic training/eval data LLM-generated — may not reflect real attacker creativity.
 - No SPF/DKIM/DMARC signals; local-only deployment, not load-tested.
@@ -214,16 +216,18 @@ Three layers, easiest to hardest: **(1)** synthetic ablation study (40 emails, 3
 
 | Risk | Mitigation | Status |
 |---|---|---|
-| LLM01 Prompt Injection | Email body treated as untrusted data; separated from instructions | 5/5 adversarial tests caught |
+| LLM01 Prompt Injection | Email body treated as untrusted data; separated from instructions | 5/5\* adversarial tests caught |
 | LLM02 Insecure Output Handling | Fence stripping, guarded JSON parsing, field allowlisting, safe defaults | Verified |
 | LLM03 Training Data Poisoning | Synthetic data, manually reviewed, balanced labels | Verified |
-| LLM04 Model DoS | Rate limiting at webhook layer | Documented |
+| LLM04 Model DoS | Rate limiting planned at webhook layer; local-only deployment limits exposure | Planned — not load-tested\* |
 | LLM05 Supply Chain | Locked dependency versions | Verified |
 | LLM06 Sensitive Info Disclosure | Synthetic data only — no real PII in training | Verified |
 | LLM07 Insecure Plugin Design | API keys in n8n credentials, never hardcoded | Verified |
 | LLM08 Excessive Agency | Classifier only — no auto-quarantine; `needs_review` flag for humans | By design |
 | LLM09 Overreliance | Reasoning + trust score surfaced, not just a label; Validator downgrades over-confident verdicts | By design |
 | LLM10 Model Theft | Model runs locally via Ollama; not publicly hosted | By design |
+
+\* *LLM01: n=5 adversarial emails — a real test, but a tiny one. LLM04: no rate limiting is implemented or measured yet; the mitigation is planned, not proven.*
 
 ---
 
