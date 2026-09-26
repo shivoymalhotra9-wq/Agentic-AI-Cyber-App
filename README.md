@@ -265,7 +265,7 @@ Net: 6× faster, zero measured quality impact, two attempts documented as revers
 Agentic-AI-Cyber-App/
 ├── README.md
 ├── LICENSE
-├── App.py                  # dashboard scaffold (WIP — not functional yet)
+├── App.py                  # Streamlit dashboard (needs env vars from .env.example)
 ├── requirements.txt
 ├── .env.example
 ├── docs/                   # design notes, schemas, runbook
@@ -273,7 +273,6 @@ Agentic-AI-Cyber-App/
 ├── models/
 │   ├── gguf/               # Modelfile template (GGUF weights stay local, not committed)
 │   └── training/           # training datasets (CSVs used for LoRA fine-tuning)
-├── streamlit/              # dashboard assets (WIP)
 └── workflows/              # 4 n8n workflow JSONs: Extractor, Classifier, Validator, Orchestrator
 ```
 
@@ -298,7 +297,7 @@ ollama create phishing-binary -f models/gguf/Modelfile
 
 # 4. Configure
 cp .env.example .env
-# fill in: SUPABASE_URL, SUPABASE_ANON_KEY, ANTHROPIC_API_KEY
+# fill in: SUPABASE_URL, SUPABASE_KEY, ANTHROPIC_API_KEY
 
 # 5. Start n8n and import the 4 workflows from workflows/
 docker run -d --name n8n --restart unless-stopped -p 5678:5678 n8nio/n8n
