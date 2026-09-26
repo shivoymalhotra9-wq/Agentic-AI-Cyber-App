@@ -10,6 +10,16 @@
 
 ---
 
+## 🎬 Demo
+
+Watch the full pipeline catch a live phishing email — 104 seconds, narrated:
+
+![AI Phishing Detection Agent — live demo](assets/demo-video-final-cut.mp4)
+
+*The demo sends a fake PayPal phish (`paypa1-secure.com`) through the webhook — Extractor → Classifier (fine-tuned Llama 3.2) → Validator — and lands on **phishing, 99% confidence**, then walks through the honest benchmarks and roadmap below.*
+
+---
+
 ## ⚠️ Read This First
 
 > This project reports **two very different accuracy numbers, on purpose.**
@@ -251,6 +261,7 @@ Net: 6× faster, zero measured quality impact, two attempts documented as revers
 Agentic-AI-Cyber-App/
 ├── README.md
 ├── LICENSE
+├── assets/                 # demo video (demo-video-final-cut.mp4)
 ├── App.py                  # dashboard scaffold (WIP — not functional yet)
 ├── requirements.txt
 ├── .env.example
@@ -342,6 +353,8 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ---
 
-**Built by Shivoy Malhotra** — Technical Program Manager | AI Security & Cloud Delivery
+**Built by [Shivoy Malhotra](https://www.linkedin.com/in/shivoymalhotra)** — Technical Program Manager | AI Security & Cloud Delivery
 
-*Last updated: September 25, 2026*
+🌐 Portfolio: [shivoy-portfolio.vercel.app](https://shivoy-portfolio.vercel.app) · 💼 LinkedIn: [linkedin.com/in/shivoymalhotra](https://www.linkedin.com/in/shivoymalhotra)
+
+*Last updated: September 26, 2026*
