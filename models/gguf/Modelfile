@@ -1,0 +1,25 @@
+# Modelfile for the fine-tuned phishing binary classifier.
+#
+# SETUP:
+#   1. Place this file in the SAME folder as your GGUF file.
+#      The weights are NOT committed to the repo (2GB) — this file only
+#      describes how Ollama should serve them.
+#   2. From that folder, run:  ollama create phishing-binary -f Modelfile
+#
+# NOTE: the TEMPLATE below is the exact prompt format the model was
+# served with. The PARAMETER lines are sensible defaults for a
+# classifier — adjust or drop them if your setup used different values.
+
+FROM ./phishing-binary-q4.gguf
+
+PARAMETER temperature 0.1
+PARAMETER top_p 0.9
+PARAMETER num_ctx 2048
+
+TEMPLATE """### Instruction:
+Classify this email as malicious or safe.
+
+### Input:
+{{ .Prompt }}
+
+### Response:"""
