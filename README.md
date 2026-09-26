@@ -14,7 +14,9 @@
 
 Watch the full pipeline catch a live phishing email — 104 seconds, narrated:
 
-![AI Phishing Detection Agent — live demo](assets/demo-video-final-cut.mp4)
+<video src="assets/demo-video-final-cut.mp4" controls="controls" style="max-width: 100%;">
+  <a href="assets/demo-video-final-cut.mp4">Watch the demo video</a>
+</video>
 
 *The demo sends a fake PayPal phish (`paypa1-secure.com`) through the webhook — Extractor → Classifier (fine-tuned Llama 3.2) → Validator — and lands on **phishing, 99% confidence**, then walks through the honest benchmarks and roadmap below.*
 
