@@ -1,4 +1,5 @@
 import requests
+import os
 import time
 import json
 from collections import Counter
@@ -7,7 +8,7 @@ from collections import Counter
 # CONFIGURATION — REPLACE THE THREE KEYS BELOW
 # ============================================================
 
-SUPABASE_URL = "https://zvqfidnukaphjkiqbryl.supabase.co"
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://your-project.supabase.co")
 SUPABASE_KEY = "YOUR_SUPABASE_KEY_HERE"
 ANTHROPIC_KEY = "YOUR_ANTHROPIC_KEY_HERE"
 GEMINI_KEY = "YOUR_GEMINI_KEY_HERE"

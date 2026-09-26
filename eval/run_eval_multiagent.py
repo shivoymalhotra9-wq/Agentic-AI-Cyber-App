@@ -1,8 +1,9 @@
 import requests
+import os
 import time
 import json
 
-SUPABASE_URL = "https://zvqfidnukaphjkiqbryl.supabase.co"
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://your-project.supabase.co")
 SUPABASE_KEY = "YOUR_SUPABASE_KEY_HERE"  
 
 # NEW multi-agent webhook endpoint

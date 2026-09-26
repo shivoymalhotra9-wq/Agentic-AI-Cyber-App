@@ -2,6 +2,10 @@ import pandas as pd
 import random
 import re
 
+# NOTE: expects the public Nazario phishing corpus at data/nazario/phishing_emails.csv.
+# That file is gitignored (third-party data) — download it yourself before running.
+# Everything downstream (prepare -> load -> run_real_world_tests) depends on it.
+
 random.seed(42)
 
 # Load the full dataset
