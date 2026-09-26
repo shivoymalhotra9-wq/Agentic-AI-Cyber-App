@@ -7,9 +7,19 @@ from supabase import create_client, Client
 # ---------- Load secrets from environment ----------
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")       # ANON key (safe for public)
-CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
+CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+def get_supabase():
+    """Create the Supabase client lazily so importing the app never crashes
+    when env vars are missing (e.g. fresh clone before `cp .env.example .env`)."""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return None
+    try:
+        return create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception:
+        return None
+
+supabase: Client | None = get_supabase()
 
 # ---------- Page config ----------
 st.set_page_config(page_title="Phishing Email Triage", layout="centered")
@@ -17,6 +27,10 @@ st.title("🛡️ Phishing Email Triage")
 st.caption("Paste the email details below. Claude will classify the email and extract indicators of compromise.")
 st.info("🔒 For demo purposes only. Do not submit real personal or confidential emails. Data is sent to Claude API for analysis.")
 st.divider()
+
+if supabase is None:
+    st.warning("Supabase not configured \u2014 dashboard metrics and saving are disabled. "
+               "Copy `.env.example` to `.env` and fill in your keys to enable them.")
 
 # ---------- KPI Cards ----------
 try:
