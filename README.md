@@ -76,6 +76,8 @@ Then proved each component's value with an ablation study:
 | B | Static only | **97.5%** | **95.7%** | 100% |
 | C | Static + behavioral | 97.5% | 95.7% | 100% |
 
+\* *Recall here is measured on the 40-email synthetic ablation set — same small-data caveat as the benchmarks above.*
+
 **Finding:** sender-domain grounding was the single biggest lever (+14 pts). Behavioral grounding didn't move the number on this set but is the only signal that can catch BEC from a known domain — kept for that reason.
 
 ### 3. Fine-tuning: four failures, then the breakthrough
