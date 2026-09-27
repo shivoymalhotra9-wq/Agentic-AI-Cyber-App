@@ -25,7 +25,7 @@ Watch the full pipeline catch a live phishing email — 104 seconds, narrated:
 > This project reports **two very different accuracy numbers, on purpose.**
 >
 > - **92.5–100%**\* on synthetic benchmarks (data matching the model's training distribution)
-> - **~56% accuracy / 25% recall on a real-world 2000s-era phishing corpus**
+> - **~56% exact-label accuracy / 24% malicious-email recall on a real-world 2000s-era phishing corpus**
 >
 > The gap is the most important finding in this repo — a textbook **training/test domain shift**. It's documented in [Limitations](#️-limitations--honest-findings), not buried. I chose to report both numbers rather than only the flattering one.
 
@@ -47,12 +47,12 @@ An end-to-end email threat classifier: raw email in, structured verdict out (`ph
 | Multi-agent benchmark | 40 emails | **92.5% exact match, 97.5% alert accuracy, 100% recall, 0 false negatives**\* |
 | Adversarial gold set (single judge, hand-labeled) | 30 hard emails, 6 categories | **83.33% agreement** |
 | Adversarial gold set (LLM-as-jury: Claude + Gemini + Llama) | Same 30 emails | **96.67% agreement** |
-| Real-world corpus (1999–2005 phishing) | 200 real emails | **56.5% accuracy, 25.3% recall, 82.8% precision, 95% specificity** |
+| Real-world corpus (1999–2005 phishing) | 200 real emails | **56.5% exact-label accuracy, 24.0% malicious-email recall, 82.8% precision, 95% specificity** |
 | Prompt-injection resistance | 5 adversarial emails | **5/5 caught**\* |
 | Inference latency (after optimization) | Per email | **~4s** (down from ~30s; small-sample measurement, $0 added cost) |
 | Cost | Per email | **~$0.0002** (Claude judge only; everything else free/local) |
 
-\* *Small-data caveat: every 100% in this README was measured on 30–45 partly-synthetic emails — a strong directional signal, not a statistical proof. Treat the 200-email real-world result (56.5% accuracy) as the number with actual weight behind it.*
+\* *Small-data caveat: every 100% in this README was measured on 30–45 partly-synthetic emails — a strong directional signal, not a statistical proof. Treat the 200-email real-world result (56.5% exact-label accuracy) as the number with actual weight behind it. Note: 56.5% is exact four-label (phishing/BEC/spam/legitimate) accuracy, while 24.0% recall, 82.8% precision, and 95% specificity are binary malicious-vs-safe alert metrics — different tasks, so the numbers are not directly comparable.*
 
 ---
 
@@ -112,7 +112,7 @@ The hand-labeled 30-email gold set exposed one weak spot: spam-vs-phishing (40% 
 
 ### 6. The real-world test (and the honest finding)
 
-Ran 200 real emails (100 phishing from a public 1999–2005 corpus + 100 legitimate) through the actual pipeline: **56.5% accuracy, 25.3% recall, 95% specificity**. The model almost never false-alarms on legitimate mail but misses ~75% of old phishing — because it was trained on 2026-style attacks (typosquats, credential harvest, BEC) and the test set is Nigerian-prince/pharma-spam era. Classic domain shift, documented as the headline finding rather than "fixed" by retraining on the old corpus (which would just move the mismatch, not remove it).
+Ran 200 real emails (100 phishing from a public 1999–2005 corpus + 100 legitimate) through the actual pipeline: **56.5% exact-label accuracy, 24.0% malicious-email recall, 95% specificity**. The model almost never false-alarms on legitimate mail but misses ~76% of old phishing — because it was trained on 2026-style attacks (typosquats, credential harvest, BEC) and the test set is Nigerian-prince/pharma-spam era. Classic domain shift, documented as the headline finding rather than "fixed" by retraining on the old corpus (which would just move the mismatch, not remove it).
 
 ---
 
@@ -204,7 +204,7 @@ Three layers, easiest to hardest: **(1)** synthetic ablation study (40 emails, 3
 
 ## ⚠️ Limitations & Honest Findings
 
-- **Domain shift is the headline finding** (see table in [How It Was Built](#6-the-real-world-test-and-the-honest-finding)): 100%\* recall on synthetic 2026-style phishing, 25% on a 1999–2005 corpus. The fix is training data matching the production threat distribution — not a pipeline bug.
+- **Domain shift is the headline finding** (see table in [How It Was Built](#6-the-real-world-test-and-the-honest-finding)): 100%\* recall on synthetic 2026-style phishing, 24% on a 1999–2005 corpus. The fix is training data matching the production threat distribution — not a pipeline bug.
 - Small hand-labeled sets (30–45 emails); not statistically powered.
 - All synthetic training/eval data LLM-generated — may not reflect real attacker creativity.
 - No SPF/DKIM/DMARC signals; local-only deployment, not load-tested.
@@ -360,3 +360,4 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 🌐 Portfolio: [shivoy-portfolio.vercel.app](https://shivoy-portfolio.vercel.app) · 💼 LinkedIn: [linkedin.com/in/shivoymalhotra](https://www.linkedin.com/in/shivoymalhotra)
 
 *Last updated: September 26, 2026*
+
