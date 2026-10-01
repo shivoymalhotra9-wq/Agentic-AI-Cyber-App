@@ -1,0 +1,96 @@
+"""Station 2: the detectives' office.
+
+Deterministic checks: no network, no cost. Each check inspects the
+extracted facts and returns EvidenceItem notes. The notes travel
+forward to brief the classifier and feed the validator's trust score.
+Witnesses, not judges.
+
+Deferred to later steps: link-text vs destination (needs HTML parsing),
+subdomain tricks like paypal.com.evil.com (needs registrable-domain logic).
+"""
+
+from typing import List, Optional
+from urllib.parse import urlparse
+
+from .schemas import ExtractedEmail, EvidenceItem
+
+
+def _domain_of(addr: str) -> str:
+    """'Billing <billing@paypa1-secure.com>' -> 'paypa1-secure.com'."""
+    addr = addr.strip()
+    if "<" in addr and ">" in addr:
+        addr = addr[addr.find("<") + 1:addr.find(">")]
+    return addr.split("@")[-1].strip().lower() if "@" in addr else ""
+
+
+def check_reply_to_mismatch(email: ExtractedEmail) -> Optional[EvidenceItem]:
+    """From and Reply-To on different domains: classic spoofing signal."""
+    from_d = _domain_of(email.from_addr)
+    reply_d = _domain_of(email.reply_to)
+    if email.reply_to and from_d and reply_d and from_d != reply_d:
+        return EvidenceItem(
+            check="reply_to_mismatch",
+            detail=f"Reply-To domain ({reply_d}) differs from From domain ({from_d})",
+        )
+    return None
+
+
+def _one_char_off(a: str, b: str) -> bool:
+    """Same length, exactly one character different: paypa1 vs paypal."""
+    return len(a) == len(b) and a != b and sum(c1 != c2 for c1, c2 in zip(a, b)) == 1
+
+
+def _brand_in_core(core: str, base: str) -> bool:
+    """Is the brand hiding inside this domain chunk? paypa1-secure -> paypal."""
+    for chunk in core.replace("_", "-").split("-"):
+        if chunk != base and (_one_char_off(chunk, base) or (base in chunk and len(chunk) > len(base))):
+            return True
+    return False
+
+
+_TRUSTED_BRANDS = [
+    "paypal.com",
+    "apple.com",
+    "microsoft.com",
+    "google.com",
+    "amazon.com",
+]
+
+
+def check_lookalike_domains(email: ExtractedEmail) -> List[EvidenceItem]:
+    """Brand mimicry: paypa1-secure.com, micros0ft-login.com."""
+    domains = set()
+    for addr in (email.from_addr, email.reply_to):
+        d = _domain_of(addr)
+        if d:
+            domains.add(d)
+    for u in email.urls:
+        try:
+            netloc = urlparse(u).netloc.lower().split(":")[0]
+        except Exception:
+            continue
+        if netloc:
+            domains.add(netloc)
+
+    items: List[EvidenceItem] = []
+    for d in sorted(domains):
+        if d in _TRUSTED_BRANDS:
+            continue  # the real thing, not a mimic
+        for brand in _TRUSTED_BRANDS:
+            if _brand_in_core(d.split(".")[0], brand.split(".")[0]):
+                items.append(EvidenceItem(
+                    check="lookalike_domain",
+                    detail=f"Domain {d} resembles trusted brand {brand}",
+                ))
+                break
+    return items
+
+
+def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
+    """Run every Station 2 check; gather the detective's notes."""
+    items: List[EvidenceItem] = []
+    hit = check_reply_to_mismatch(email)
+    if hit is not None:
+        items.append(hit)
+    items.extend(check_lookalike_domains(email))
+    return items

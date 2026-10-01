@@ -9,6 +9,7 @@ from .schemas import AnalyzeRequest, Verdict
 from .extractor import extract
 from .classifier import classify
 from .validator import validate
+from .evidence import collect_evidence
 
 app = FastAPI(title="PhishSquad")
 
@@ -21,7 +22,7 @@ def health():
 @app.post("/analyze", response_model=Verdict)
 def analyze(req: AnalyzeRequest):
     email = extract(req.raw_email)
-    evidence = []  # Station 2 stub — the detective squad arrives in Phase 3
+    evidence = collect_evidence(email)
     statement = classify(email, evidence)
     return validate(statement, lambda: classify(email, evidence))
 
