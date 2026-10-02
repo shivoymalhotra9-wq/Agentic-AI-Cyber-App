@@ -86,6 +86,20 @@ def check_lookalike_domains(email: ExtractedEmail) -> List[EvidenceItem]:
     return items
 
 
+def check_auth_results_fail(email: ExtractedEmail) -> List[EvidenceItem]:
+    """The mail server's own report card: flag failed SPF/DKIM/DMARC."""
+    text = (email.auth_results or "").lower()
+    failed = [name for name in ("spf", "dkim", "dmarc")
+              if f"{name}=fail" in text]
+    if not failed:
+        return []
+    return [EvidenceItem(
+        check="auth_results_fail",
+        detail=f"Receiving server reported {'/'.join(failed)}=fail "
+               f"in Authentication-Results",
+    )]
+
+
 def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     """Run every Station 2 check; gather the detective's notes."""
     items: List[EvidenceItem] = []
@@ -93,4 +107,5 @@ def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     if hit is not None:
         items.append(hit)
     items.extend(check_lookalike_domains(email))
+    items.extend(check_auth_results_fail(email))
     return items
