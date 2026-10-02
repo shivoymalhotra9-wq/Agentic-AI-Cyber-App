@@ -11,6 +11,7 @@ subdomain tricks like paypal.com.evil.com (needs registrable-domain logic).
 
 import datetime
 import json
+import os
 import urllib.request
 from typing import List, Optional
 from urllib.parse import urlparse
@@ -179,6 +180,53 @@ def check_new_domain(email: ExtractedEmail) -> List[EvidenceItem]:
     )]
 
 
+_TAVILY_CACHE: dict = {}
+_THREAT_WORDS = ("phish", "malware", "malicious", "scam", "fraud", "typosquat")
+
+
+def _tavily_search(query: str) -> list:
+    """Ask Tavily threat intel; results cached so repeat domains cost nothing."""
+    if query in _TAVILY_CACHE:
+        return _TAVILY_CACHE[query]
+    key = os.environ.get("TAVILY_API_KEY", "")
+    if not key:
+        return []
+    try:
+        req = urllib.request.Request(
+            "https://api.tavily.com/search",
+            data=json.dumps({
+                "api_key": key,
+                "query": f'"{query}" phishing scam',
+                "search_depth": "basic",
+                "max_results": 3,
+            }).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            results = json.load(r).get("results", [])
+    except Exception:
+        results = []
+    _TAVILY_CACHE[query] = results
+    return results
+
+
+def check_tavily_threat(email: ExtractedEmail) -> List[EvidenceItem]:
+    """Headquarters check: does threat intel implicate this sender domain?"""
+    domain = _domain_of(email.from_addr)
+    if not domain or domain in _TRUSTED_BRANDS:
+        return []
+    for r in _tavily_search(domain):
+        text = (r.get("title", "") + " " + r.get("content", "")).lower()
+        named = domain in r.get("title", "").lower() or domain in r.get("url", "").lower()
+        if named and any(w in text for w in _THREAT_WORDS):
+            return [EvidenceItem(
+                check="tavily_threat",
+                detail=f"Threat intel implicates {domain} in phishing/scam activity",
+                url=r.get("url"),
+            )]
+    return []
+
+
 def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     """Run every Station 2 check; gather the detective's notes."""
     items: List[EvidenceItem] = []
@@ -189,4 +237,5 @@ def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     items.extend(check_auth_results_fail(email))
     items.extend(check_mta_sts_violation(email))
     items.extend(check_new_domain(email))
+    items.extend(check_tavily_threat(email))
     return items
