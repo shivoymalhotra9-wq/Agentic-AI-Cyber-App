@@ -9,8 +9,11 @@ Deferred to later steps: link-text vs destination (needs HTML parsing),
 subdomain tricks like paypal.com.evil.com (needs registrable-domain logic).
 """
 
+import urllib.request
 from typing import List, Optional
 from urllib.parse import urlparse
+
+import dns.resolver
 
 from .schemas import ExtractedEmail, EvidenceItem
 
@@ -100,6 +103,46 @@ def check_auth_results_fail(email: ExtractedEmail) -> List[EvidenceItem]:
     )]
 
 
+def _mta_sts_mode(domain: str) -> Optional[str]:
+    """Read the domain's published MTA-STS policy; return its mode, if any."""
+    try:
+        txt = "".join(
+            a.to_text().strip('"')
+            for a in dns.resolver.resolve(f"_mta-sts.{domain}", "TXT")
+        )
+        if "v=STSv1" not in txt:
+            return None
+    except Exception:
+        return None  # no policy published: check doesn't apply
+    try:
+        with urllib.request.urlopen(
+            f"https://mta-sts.{domain}/.well-known/mta-sts.txt", timeout=5
+        ) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+        for line in body.splitlines():
+            if line.lower().startswith("mode:"):
+                return line.split(":", 1)[1].strip().lower()
+    except Exception:
+        return None
+    return None
+
+
+def check_mta_sts_violation(email: ExtractedEmail) -> List[EvidenceItem]:
+    """Domain demands TLS (MTA-STS enforce) but a hop arrived in plaintext."""
+    domain = _domain_of(email.from_addr)
+    if not domain or _mta_sts_mode(domain) != "enforce":
+        return []
+    plaintext = [r for r in email.received_headers
+                 if "tls" not in r.lower() and "esmtps" not in r.lower()]
+    if not plaintext:
+        return []
+    return [EvidenceItem(
+        check="mta_sts_violation",
+        detail=f"{domain} publishes MTA-STS mode=enforce but "
+               f"{len(plaintext)} hop(s) arrived without TLS",
+    )]
+
+
 def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     """Run every Station 2 check; gather the detective's notes."""
     items: List[EvidenceItem] = []
@@ -108,4 +151,5 @@ def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
         items.append(hit)
     items.extend(check_lookalike_domains(email))
     items.extend(check_auth_results_fail(email))
+    items.extend(check_mta_sts_violation(email))
     return items
