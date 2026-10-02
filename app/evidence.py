@@ -29,6 +29,14 @@ def _domain_of(addr: str) -> str:
     return addr.split("@")[-1].strip().lower() if "@" in addr else ""
 
 
+def _bare_addr(addr: str) -> str:
+    """'Billing <billing@x.com>' -> 'billing@x.com'."""
+    addr = addr.strip()
+    if "<" in addr and ">" in addr:
+        addr = addr[addr.find("<") + 1:addr.find(">")]
+    return addr.strip().lower()
+
+
 def check_reply_to_mismatch(email: ExtractedEmail) -> Optional[EvidenceItem]:
     """From and Reply-To on different domains: classic spoofing signal."""
     from_d = _domain_of(email.from_addr)
@@ -227,6 +235,33 @@ def check_tavily_threat(email: ExtractedEmail) -> List[EvidenceItem]:
     return []
 
 
+_HISTORY_PATH = os.path.join(os.path.dirname(__file__), "..", "sender_history.json")
+
+
+def check_new_sender(email: ExtractedEmail) -> List[EvidenceItem]:
+    """First contact: note it, and file the sender away for next time."""
+    sender = _bare_addr(email.from_addr)
+    if not sender or "@" not in sender:
+        return []
+    try:
+        with open(_HISTORY_PATH) as f:
+            history = json.load(f)
+    except Exception:
+        history = {}
+    if sender in history:
+        return []  # old acquaintance: nothing to note
+    history[sender] = {"first_seen": datetime.date.today().isoformat(), "count": 1}
+    try:
+        with open(_HISTORY_PATH, "w") as f:
+            json.dump(history, f)
+    except Exception:
+        pass
+    return [EvidenceItem(
+        check="new_sender",
+        detail=f"First time seeing sender {sender}",
+    )]
+
+
 def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     """Run every Station 2 check; gather the detective's notes."""
     items: List[EvidenceItem] = []
@@ -238,4 +273,5 @@ def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     items.extend(check_mta_sts_violation(email))
     items.extend(check_new_domain(email))
     items.extend(check_tavily_threat(email))
+    items.extend(check_new_sender(email))
     return items
