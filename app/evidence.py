@@ -9,6 +9,8 @@ Deferred to later steps: link-text vs destination (needs HTML parsing),
 subdomain tricks like paypal.com.evil.com (needs registrable-domain logic).
 """
 
+import datetime
+import json
 import urllib.request
 from typing import List, Optional
 from urllib.parse import urlparse
@@ -143,6 +145,40 @@ def check_mta_sts_violation(email: ExtractedEmail) -> List[EvidenceItem]:
     )]
 
 
+def _domain_age_days(domain: str) -> Optional[int]:
+    """Days since the domain was registered (via RDAP); None if unknown."""
+    tld = domain.rsplit(".", 1)[-1] if "." in domain else ""
+    try:
+        with urllib.request.urlopen("https://data.iana.org/rdap/dns.json", timeout=5) as r:
+            services = json.load(r)["services"]
+        server = next((s[1][0] for s in services if tld in s[0]), None)
+        if not server:
+            return None
+        with urllib.request.urlopen(f"{server}domain/{domain}", timeout=5) as r:
+            data = json.load(r)
+        for ev in data.get("events", []):
+            if ev.get("eventAction") == "registration":
+                born = datetime.date.fromisoformat(ev.get("eventDate", "")[:10])
+                return (datetime.date.today() - born).days
+    except Exception:
+        return None
+    return None
+
+
+def check_new_domain(email: ExtractedEmail) -> List[EvidenceItem]:
+    """Flag sender domains registered less than 30 days ago."""
+    domain = _domain_of(email.from_addr)
+    if not domain:
+        return []
+    age = _domain_age_days(domain)
+    if age is None or age >= 30:
+        return []
+    return [EvidenceItem(
+        check="new_domain",
+        detail=f"Sender domain {domain} registered only {age} day(s) ago",
+    )]
+
+
 def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     """Run every Station 2 check; gather the detective's notes."""
     items: List[EvidenceItem] = []
@@ -152,4 +188,5 @@ def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     items.extend(check_lookalike_domains(email))
     items.extend(check_auth_results_fail(email))
     items.extend(check_mta_sts_violation(email))
+    items.extend(check_new_domain(email))
     return items
