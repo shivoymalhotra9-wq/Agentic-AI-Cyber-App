@@ -55,5 +55,8 @@ def extract(raw_email: str) -> ExtractedEmail:
         body_text=body,
         urls=URL_RE.findall(body),
         attachment_names=[a for a in attachments if a],
+        auth_results=str(msg.get("Authentication-Results", "")),
+        received_headers=[str(v) for v in msg.get_all("Received", [])],
+        has_dkim_signature=msg.get("DKIM-Signature") is not None,
+        return_path=str(msg.get("Return-Path", "")),
     )
-

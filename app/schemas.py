@@ -1,4 +1,5 @@
 from typing import List, Literal, Optional
+
 from pydantic import BaseModel, Field
 
 VerdictLabel = Literal["phishing", "legitimate", "needs_review"]
@@ -15,6 +16,12 @@ class ExtractedEmail(BaseModel):
     body_text: str = ""
     urls: List[str] = []
     attachment_names: List[str] = []
+    # Auth headers kept from the envelope (Phase 3): the mail server's
+    # own SPF/DKIM/DMARC verdicts plus the per-hop delivery stamps.
+    auth_results: str = ""
+    received_headers: List[str] = []
+    has_dkim_signature: bool = False
+    return_path: str = ""
 
 
 class EvidenceItem(BaseModel):
@@ -37,4 +44,3 @@ class Verdict(BaseModel):
 class AnalyzeRequest(BaseModel):
     """What the front door accepts: one raw email."""
     raw_email: str
-
