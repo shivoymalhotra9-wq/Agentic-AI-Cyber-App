@@ -24,5 +24,4 @@ def analyze(req: AnalyzeRequest):
     email = extract(req.raw_email)
     evidence = collect_evidence(email)
     statement = classify(email, evidence)
-    return validate(statement, lambda: classify(email, evidence))
-
+return validate(statement, lambda: classify(email, evidence), evidence)
