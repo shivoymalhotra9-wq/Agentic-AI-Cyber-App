@@ -69,6 +69,11 @@ _TRUSTED_BRANDS = [
 ]
 
 
+def _is_trusted_domain(domain: str) -> bool:
+    """Exact brand or its subdomain: google.com, accounts.google.com."""
+    return any(domain == b or domain.endswith("." + b) for b in _TRUSTED_BRANDS)
+
+
 def check_lookalike_domains(email: ExtractedEmail) -> List[EvidenceItem]:
     """Brand mimicry: paypa1-secure.com, micros0ft-login.com."""
     domains = set()
@@ -86,7 +91,7 @@ def check_lookalike_domains(email: ExtractedEmail) -> List[EvidenceItem]:
 
     items: List[EvidenceItem] = []
     for d in sorted(domains):
-        if d in _TRUSTED_BRANDS:
+        if _is_trusted_domain(d):
             continue  # the real thing, not a mimic
         for brand in _TRUSTED_BRANDS:
             if _brand_in_core(d.split(".")[0], brand.split(".")[0]):
@@ -179,7 +184,7 @@ def _tavily_search(query: str) -> list:
 def check_tavily_threat(email: ExtractedEmail) -> List[EvidenceItem]:
     """Headquarters check: does threat intel implicate this sender domain?"""
     domain = _domain_of(email.from_addr)
-    if not domain or domain in _TRUSTED_BRANDS:
+    if not domain or _is_trusted_domain(domain):
         return []
     for r in _tavily_search(domain):
         text = (r.get("title", "") + " " + r.get("content", "")).lower()
