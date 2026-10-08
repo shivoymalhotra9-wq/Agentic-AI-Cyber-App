@@ -2,8 +2,9 @@
 
 POST /analyze: raw email in, stamped verdict out.
 GET /health: is the building awake? (for the heartbeat)
-GET /report: the threat desk — visual verdict dashboard.
+GET /report: the threat desk — every verdict, gold-on-navy dashboard.
 GET /report/download: the verdict log as a downloadable report.
+GET /redteam: the red-team scoreboard — latest adversarial battery run.
 """
 import json
 import os
@@ -20,6 +21,7 @@ from .evidence import collect_evidence
 app = FastAPI(title="PhishSquad")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VERDICT_LOG = os.path.join(ROOT, "verdicts.jsonl")
+REDTEAM_RESULTS = os.path.join(ROOT, "redteam", "results.json")
 
 _DASH_CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
@@ -36,10 +38,10 @@ h1{color:#f5b301;text-shadow:0 0 18px rgba(245,179,1,.55);letter-spacing:5px;fon
 .stat .l{font-size:12px;letter-spacing:2px;color:#9aa0b4;margin-top:8px}
 .dist{margin:0 0 30px;border:1px solid #2a2a4e;border-radius:10px;padding:18px;background:rgba(14,14,30,.9)}
 .drow{display:flex;align-items:center;gap:12px;margin:10px 0}
-.drow .dl2{width:110px;font-size:12px;letter-spacing:2px;color:#9aa0b4;font-weight:700}
+.drow .dl2{width:180px;flex-shrink:0;font-size:12px;letter-spacing:2px;color:#9aa0b4;font-weight:700}
 .dbar{flex:1;height:14px;background:#1a1a30;border-radius:7px;overflow:hidden}
 .dbar div{height:100%;border-radius:7px;box-shadow:0 0 12px currentColor}
-.drow .dv{width:40px;text-align:right;font-weight:800;font-size:15px}
+.drow .dv{width:60px;text-align:right;font-weight:800;font-size:15px}
 .card{--neon:#8a93a6;border:1px solid var(--neon);border-radius:10px;padding:16px 18px;margin:14px 0;background:rgba(14,14,30,.92);box-shadow:0 0 22px -8px var(--neon)}
 .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .verdict{font-weight:800;letter-spacing:2px;color:var(--neon);text-shadow:0 0 12px var(--neon);font-size:16px}
@@ -48,6 +50,7 @@ h1{color:#f5b301;text-shadow:0 0 18px rgba(245,179,1,.55);letter-spacing:5px;fon
 .tfill{height:100%;border-radius:5px;background:var(--neon);box-shadow:0 0 10px var(--neon)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .tag{background:rgba(245,179,1,.1);border:1px solid #f5b301;color:#f5b301;font-size:12px;font-weight:700;padding:4px 10px;border-radius:5px;font-family:'Courier New',monospace}
+.rs{font-size:15px;margin:6px 0;color:#e8eaf2;line-height:1.55}
 .empty{color:#9aa0b4;font-size:15px}
 .foot{margin-top:40px;color:#5a5f7a;font-size:12px;letter-spacing:3px;text-align:center}
 """
@@ -127,7 +130,8 @@ def report():
         f"<style>{_DASH_CSS}</style></head><body><div class='wrap'>"
         "<div class='topbar'><div><h1>◈ PHISHSQUAD</h1>"
         "<div class='sub'>THREAT DESK // LIVE VERDICTS</div></div>"
-        "<a class='dl' href='/report/download'>⬇ DOWNLOAD REPORT</a></div>"
+        "<div><a class='dl' href='/redteam' style='margin-right:10px'>⚔ RED TEAM</a>"
+        "<a class='dl' href='/report/download'>⬇ DOWNLOAD REPORT</a></div></div>"
         + stats + f"<div class='dist'>{dist}</div>" + body +
         "<div class='foot'>PHISHSQUAD // NEBIUS × NVIDIA HACKATHON</div>"
         "</div></body></html>"
@@ -145,4 +149,60 @@ def download_report():
         content,
         media_type="application/json",
         headers={"Content-Disposition": "attachment; filename=phishsquad-report.json"},
+    )
+
+
+@app.get("/redteam", response_class=HTMLResponse)
+def redteam_dash():
+    try:
+        with open(REDTEAM_RESULTS) as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        data = None
+
+    if not data:
+        head = ""
+        body = "<p class='empty'>No red-team run yet. Run: <b>python -m app.redteam</b></p>"
+    else:
+        rows = []
+        for a in data["attacks"]:
+            c = "#34d399" if a["held"] else "#ff4d2e"
+            status = "HELD" if a["held"] else "BREACHED"
+            extra = ""
+            if a.get("leaked"):
+                extra = f" — LEAKED: {', '.join(a['leaked'])}"
+            if a.get("error"):
+                extra = f" — ERROR: {a['error']}"
+            rows.append(
+                f"<div class='card' style='--neon:{c}'>"
+                f"<div class='card-head'><span class='verdict'>{status}</span>"
+                f"<span class='conf'>{a['id']} · {a['category']}</span></div>"
+                f"<div class='rs'>{a['name']} — expected {a['expected']}, got {a['got']}{extra}</div>"
+                f"</div>"
+            )
+        body = "\n".join(rows)
+        cats = "".join(
+            f"<div class='drow'><span class='dl2'>{cat.upper()}</span>"
+            f"<div class='dbar'><div style='width:{int(v['held'] / v['total'] * 100)}%;background:#f5b301;color:#f5b301'></div></div>"
+            f"<span class='dv' style='color:#f5b301'>{v['held']}/{v['total']}</span></div>"
+            for cat, v in data["by_category"].items()
+        )
+        head = (
+            f"<div class='stats'>"
+            f"<div class='stat'><div class='n' style='color:#34d399'>{data['held']}</div><div class='l'>HELD</div></div>"
+            f"<div class='stat'><div class='n' style='color:#ff4d2e'>{data['total'] - data['held']}</div><div class='l'>BREACHED</div></div>"
+            f"</div>"
+            f"<div class='dist'>{cats}</div>"
+            f"<p class='sub'>LAST RUN // {data['ran_at']}</p>"
+        )
+
+    return (
+        "<!DOCTYPE html><html><head><title>PHISHSQUAD // Red Team</title>"
+        f"<style>{_DASH_CSS}</style></head><body><div class='wrap'>"
+        "<div class='topbar'><div><h1>◈ RED TEAM</h1>"
+        "<div class='sub'>ADVERSARIAL SELF-TEST // LATEST BATTERY RUN</div></div>"
+        "<a class='dl' href='/report'>← THREAT DESK</a></div>"
+        + head + body +
+        "<div class='foot'>PHISHSQUAD // NEBIUS × NVIDIA HACKATHON</div>"
+        "</div></body></html>"
     )

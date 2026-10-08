@@ -10,6 +10,7 @@ import imaplib
 import json
 import os
 import sys
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -45,10 +46,16 @@ def process_raw(raw_email: str):
 
 
 def _log_verdict(verdict):
-    """Append the verdict to the local log (feeds the report page later)."""
+    """Append the verdict to the local audit log (feeds the report page).
+
+    Every record carries a UTC timestamp — without it, the log is a pile,
+    not an audit trail.
+    """
     try:
+        record = verdict.model_dump()
+        record["logged_at"] = datetime.now(timezone.utc).isoformat()
         with open(VERDICT_LOG, "a") as f:
-            f.write(verdict.model_dump_json() + "\n")
+            f.write(json.dumps(record) + "\n")
     except Exception as e:
         print("log failed:", e)
 
