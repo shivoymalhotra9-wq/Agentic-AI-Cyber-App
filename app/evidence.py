@@ -1,6 +1,7 @@
 """Station 2: the detectives' office.
 
-Deterministic checks: no network, no cost. Each check inspects the
+Deterministic checks plus two network-backed checks (domain age via
+RDAP, sender-domain threat intel via Tavily). Each check inspects the
 extracted facts and returns EvidenceItem notes. The notes travel
 forward to brief the classifier and feed the validator's trust score.
 Witnesses, not judges.
@@ -117,13 +118,27 @@ def check_auth_results_fail(email: ExtractedEmail) -> List[EvidenceItem]:
     )]
 
 
+_RDAP_SERVICES = None  # fetched once per process; ~1MB bootstrap file
+
+
+def _rdap_services() -> list:
+    """IANA's RDAP server directory, cached — refetching it per email
+    was the benchmark's 20-minute slowdown (Oct 9)."""
+    global _RDAP_SERVICES
+    if _RDAP_SERVICES is None:
+        try:
+            with urllib.request.urlopen("https://data.iana.org/rdap/dns.json", timeout=5) as r:
+                _RDAP_SERVICES = json.load(r)["services"]
+        except Exception:
+            _RDAP_SERVICES = []
+    return _RDAP_SERVICES
+
+
 def _domain_age_days(domain: str) -> Optional[int]:
     """Days since the domain was registered (via RDAP); None if unknown."""
     tld = domain.rsplit(".", 1)[-1] if "." in domain else ""
     try:
-        with urllib.request.urlopen("https://data.iana.org/rdap/dns.json", timeout=5) as r:
-            services = json.load(r)["services"]
-        server = next((s[1][0] for s in services if tld in s[0]), None)
+        server = next((s[1][0] for s in _rdap_services() if tld in s[0]), None)
         if not server:
             return None
         with urllib.request.urlopen(f"{server}domain/{domain}", timeout=5) as r:

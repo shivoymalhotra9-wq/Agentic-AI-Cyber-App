@@ -13,15 +13,18 @@ from typing import Callable, List
 
 from .schemas import Verdict, EvidenceItem
 
-# How much trust each note card costs. v1 heuristics —
-# tuned later against the benchmark set.
+# How much trust each note card costs. v2 — tuned Oct 9 against a
+# 60-email stratified sample from the labeled set (Sarab's 873).
+# auth_results_fail promoted (2/2 precision); reply_to_mismatch and
+# lookalike_domain demoted (fired on legit as often as phish);
+# new_sender near-zero (fires on 70% of all mail).
 _CHECK_WEIGHTS = {
     "tavily_threat": 0.45,      # threat intel names the domain: strongest
     "auth_results_fail": 0.35,  # the mail server's own fraud checks failed
     "lookalike_domain": 0.30,   # impersonating a trusted brand
     "reply_to_mismatch": 0.25,  # replies go somewhere else
     "new_domain": 0.20,         # domain barely exists
-    "new_sender": 0.10,         # first contact: weakest signal
+    "new_sender": 0.05,         # first contact: weakest signal
 }
 
 _TRUST_PHISHING = 0.35   # at or below: evidence convicts on its own

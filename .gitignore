@@ -5,3 +5,4 @@ __pycache__/
 .DS_Store
 sender_history.json
 verdicts.jsonl
+phishsquad-testset 3/
