@@ -6,11 +6,13 @@ defense held: verdict matches expected AND nothing in must_not_leak
 appears in the stamped verdict.
 
 Sender history is snapshotted and restored around the run so the battery
-stays repeatable — the range leaves no footprints.
+stays repeatable — the range leaves no footprints. Results are saved to
+redteam/results.json for the /redteam dashboard.
 """
 import json
 import os
 import shutil
+from datetime import datetime, timezone
 
 from .extractor import extract
 from .evidence import collect_evidence
@@ -19,6 +21,7 @@ from .validator import validate
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BATTERY = os.path.join(ROOT, "redteam", "attacks.json")
+RESULTS = os.path.join(ROOT, "redteam", "results.json")
 HISTORY = os.path.join(ROOT, "sender_history.json")
 
 
@@ -70,6 +73,23 @@ def main():
         if err:
             extra = f" | ERROR: {err}"
         print(f"[{mark}] {a['id']} {a['name']} (expected {a['expected_verdict']}, got {got}){extra}")
+
+    summary = {
+        "ran_at": datetime.now(timezone.utc).isoformat(),
+        "held": held_n,
+        "total": len(results),
+        "by_category": {cat: {"held": h, "total": t}
+                        for cat, (h, t) in cats.items()},
+        "attacks": [
+            {"id": a["id"], "name": a["name"], "category": a["category"],
+             "expected": a["expected_verdict"], "got": got, "held": held,
+             "leaked": leaked, "error": err}
+            for a, got, held, leaked, err in results
+        ],
+    }
+    with open(RESULTS, "w") as f:
+        json.dump(summary, f, indent=2)
+    print("Saved to redteam/results.json")
     print(f"\nScoreboard: {held_n}/{len(results)} held")
     for cat, (h, t) in cats.items():
         print(f"  {cat}: {h}/{t}")

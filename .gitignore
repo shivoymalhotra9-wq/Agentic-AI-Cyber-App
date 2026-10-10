@@ -6,3 +6,4 @@ __pycache__/
 sender_history.json
 verdicts.jsonl
 phishsquad-testset 3/
+"phishsquad-testset 3.zip"
