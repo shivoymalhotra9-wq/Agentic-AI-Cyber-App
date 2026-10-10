@@ -104,6 +104,69 @@ def check_lookalike_domains(email: ExtractedEmail) -> List[EvidenceItem]:
     return items
 
 
+def _display_name(addr: str) -> str:
+    """'PayPal Support <x@gmail.com>' -> 'paypal support'."""
+    addr = addr.strip()
+    if "<" in addr:
+        return addr[: addr.find("<")].strip().strip('"').lower()
+    return ""
+
+
+def check_display_name_spoof(email: ExtractedEmail) -> Optional[EvidenceItem]:
+    """The name tag claims a brand the domain doesn't own.
+
+    'PayPal Support <x@gmail.com>' — the oldest impersonation trick,
+    invisible to domain-only checks. Added Oct 10 (coverage check #1).
+    """
+    name = _display_name(email.from_addr)
+    domain = _domain_of(email.from_addr)
+    if not name or not domain or _is_trusted_domain(domain):
+        return None
+    for brand in _TRUSTED_BRANDS:
+        core = brand.split(".")[0]
+        if core in name and core not in domain:
+            return EvidenceItem(
+                check="display_name_spoof",
+                detail=f"Display name '{name}' claims {brand} "
+                       f"but sender domain is {domain}",
+            )
+    return None
+_CREDENTIAL_WORDS = (
+    "verify your password",
+    "confirm your password",
+    "update your password",
+    "enter your password",
+    "reset your password",
+    "verify your account",
+    "confirm your account",
+    "update your account",
+    "validate your account",
+    "log in to verify",
+    "login to verify",
+    "sign in to confirm",
+)
+
+
+def check_credential_harvest(email: ExtractedEmail) -> Optional[EvidenceItem]:
+    """Credential-harvest language paired with a link.
+
+    'Verify your password' + somewhere to click. Either alone is noisy
+    (colleagues mention passwords; newsletters are full of links);
+    together they're the phish shape. Added Oct 10 (coverage check #2).
+    """
+    if not email.urls:
+        return None
+    text = f"{email.subject} {email.body_text}".lower()
+    hit = next((w for w in _CREDENTIAL_WORDS if w in text), None)
+    if not hit:
+        return None
+    return EvidenceItem(
+        check="credential_harvest",
+        detail=f"Credential-harvest language ('{hit}') "
+               f"paired with {len(email.urls)} link(s)",
+    )
+
+
 def check_auth_results_fail(email: ExtractedEmail) -> List[EvidenceItem]:
     """The mail server's own report card: flag failed SPF/DKIM/DMARC."""
     text = (email.auth_results or "").lower()
@@ -247,8 +310,15 @@ def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     if hit is not None:
         items.append(hit)
     items.extend(check_lookalike_domains(email))
+    hit = check_display_name_spoof(email)
+    if hit is not None:
+        items.append(hit)
+    hit = check_credential_harvest(email)
+    if hit is not None:
+        items.append(hit)
     items.extend(check_auth_results_fail(email))
     items.extend(check_new_domain(email))
     items.extend(check_tavily_threat(email))
     items.extend(check_new_sender(email))
     return items
+

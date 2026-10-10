@@ -25,6 +25,8 @@ _CHECK_WEIGHTS = {
     "reply_to_mismatch": 0.25,  # replies go somewhere else
     "new_domain": 0.20,         # domain barely exists
     "new_sender": 0.05,         # first contact: weakest signal
+    "display_name_spoof": 0.30,  # name tag claims a brand the domain doesn't own
+    "credential_harvest": 0.25,  # credential-bait language paired with a link
 }
 
 _TRUST_PHISHING = 0.35   # at or below: evidence convicts on its own

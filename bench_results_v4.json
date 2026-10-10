@@ -1,0 +1,710 @@
+[
+  {
+    "id": "phishing-079",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "phishing",
+    "conf": 0.5,
+    "checks": [
+      "tavily_threat",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-049",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "phishing",
+    "conf": 0.3,
+    "checks": [
+      "reply_to_mismatch",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "legitimate-075",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-114",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-133",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "spam-011",
+    "label": "spam",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "tricks-161",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "phishing-010",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "phishing",
+    "conf": 0.4,
+    "checks": [
+      "auth_results_fail",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "legitimate-146",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-073",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-033",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "tricks-195",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "tricks-132",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "legitimate-149",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.4,
+    "checks": [
+      "reply_to_mismatch",
+      "lookalike_domain",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "legitimate-079",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.7,
+    "checks": [
+      "reply_to_mismatch",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-088",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "phishing",
+    "conf": 0.5,
+    "checks": [
+      "tavily_threat",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "legitimate-027",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-021",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "phishing",
+    "conf": 0.3,
+    "checks": [
+      "reply_to_mismatch",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "tricks-219",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "spam-087",
+    "label": "spam",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "spam-097",
+    "label": "spam",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "needs_review",
+    "conf": 0.5,
+    "checks": [
+      "tavily_threat",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "spam-038",
+    "label": "spam",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "tricks-201",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "tricks-202",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "spam-123",
+    "label": "spam",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "needs_review",
+    "conf": 0.5,
+    "checks": [
+      "tavily_threat",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "legitimate-047",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.7,
+    "checks": [
+      "reply_to_mismatch",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-016",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "tricks-101",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "spam-019",
+    "label": "spam",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "phishing",
+    "conf": 0.5,
+    "checks": [
+      "tavily_threat",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "legitimate-108",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "legitimate-057",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.7,
+    "checks": [
+      "reply_to_mismatch",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-085",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "tricks-184",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "spam-064",
+    "label": "spam",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "phishing",
+    "conf": 0.5,
+    "checks": [
+      "tavily_threat",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-122",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "needs_review",
+    "conf": 0.7,
+    "checks": [
+      "reply_to_mismatch",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "spam-107",
+    "label": "spam",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "phishing",
+    "conf": 0.5,
+    "checks": [
+      "tavily_threat",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-014",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "tricks-203",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "legitimate-145",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-022",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-013",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "phishing",
+    "conf": 0.5,
+    "checks": [
+      "tavily_threat",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "legitimate-031",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "phishing-054",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "phishing",
+    "conf": 0.4,
+    "checks": [
+      "auth_results_fail",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "tricks-153",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "tricks-033",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "legitimate-012",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "legitimate-035",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "tricks-227",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "legitimate-037",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.7,
+    "checks": [
+      "reply_to_mismatch",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-017",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "tricks-258",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "spam-012",
+    "label": "spam",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "needs_review",
+    "conf": 0.0,
+    "checks": [
+      "reply_to_mismatch",
+      "tavily_threat",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "legitimate-049",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-107",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "spam-099",
+    "label": "spam",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "needs_review",
+    "conf": 0.5,
+    "checks": [
+      "tavily_threat",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-093",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "phishing",
+    "conf": 0.75,
+    "checks": [
+      "reply_to_mismatch",
+      "tavily_threat",
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "phishing-117",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  },
+  {
+    "id": "tricks-056",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "tricks-028",
+    "label": "phishing",
+    "label_conf": "high",
+    "expected": "phishing",
+    "got": "legitimate",
+    "conf": 1.0,
+    "checks": [],
+    "error": null
+  },
+  {
+    "id": "legitimate-141",
+    "label": "legitimate",
+    "label_conf": "high",
+    "expected": "legitimate",
+    "got": "legitimate",
+    "conf": 0.95,
+    "checks": [
+      "new_sender"
+    ],
+    "error": null
+  }
+]
