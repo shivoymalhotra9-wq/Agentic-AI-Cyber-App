@@ -2,7 +2,9 @@
 
 POST /analyze: raw email in, stamped verdict out.
 GET /health: is the building awake? (for the heartbeat)
-GET /report: the threat desk — every verdict, gold-on-navy dashboard.
+GET /: the threat desk.
+GET /report: the threat desk — every verdict, gold-on-navy dashboard,
+  with a live "try it" analyzer for judges.
 GET /report/download: the verdict log as a downloadable report.
 GET /redteam: the red-team scoreboard — latest adversarial battery run.
 """
@@ -12,7 +14,6 @@ import os
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 
-
 from .schemas import AnalyzeRequest, Verdict
 from .extractor import extract
 from .classifier import classify
@@ -20,12 +21,24 @@ from .validator import validate
 from .evidence import collect_evidence
 
 app = FastAPI(title="PhishSquad")
-@app.get("/")
-def root():
-    return RedirectResponse(url="/report")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VERDICT_LOG = os.path.join(ROOT, "verdicts.jsonl")
 REDTEAM_RESULTS = os.path.join(ROOT, "redteam", "results.json")
+FORWARD_TO = os.environ.get("FORWARD_TO_EMAIL", "")
+
+
+def _sample_email(attack_id: str) -> str:
+    """One battery email to preload the demo form. Never raises."""
+    try:
+        with open(os.path.join(ROOT, "redteam", "attacks.json")) as f:
+            attacks = json.load(f)
+        return next(a["raw_email"] for a in attacks if a["id"] == attack_id)
+    except Exception:
+        return ""
+
+
+SAMPLE_PHISH = _sample_email("inj-01")   # injection-riding phish: demos the hardening live
+SAMPLE_LEGIT = _sample_email("leg-03")  # plain colleague mail
 
 _DASH_CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
@@ -36,6 +49,8 @@ h1{color:#f5b301;text-shadow:0 0 18px rgba(245,179,1,.55);letter-spacing:5px;fon
 .sub{color:#9aa0b4;letter-spacing:3px;font-size:13px;margin:10px 0 30px}
 .dl{display:inline-block;background:#f5b301;color:#0a0a18;font-weight:800;letter-spacing:2px;font-size:13px;padding:12px 22px;border-radius:8px;text-decoration:none;box-shadow:0 0 20px -4px #f5b301}
 .dl:hover{box-shadow:0 0 28px -2px #f5b301}
+button.dl{border:none;cursor:pointer;font-family:inherit}
+textarea{width:100%;background:#0a0a18;color:#e8eaf2;border:1px solid #2a2a4e;border-radius:8px;padding:12px;font-family:'Courier New',monospace;font-size:13px;resize:vertical}
 .stats{display:flex;gap:14px;margin-bottom:26px;flex-wrap:wrap}
 .stat{flex:1;min-width:140px;border:1px solid #2a2a4e;border-radius:10px;padding:18px 14px;background:rgba(18,18,42,.85);text-align:center;box-shadow:0 0 24px -8px rgba(245,179,1,.25)}
 .stat .n{font-size:44px;font-weight:800}
@@ -55,9 +70,48 @@ h1{color:#f5b301;text-shadow:0 0 18px rgba(245,179,1,.55);letter-spacing:5px;fon
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .tag{background:rgba(245,179,1,.1);border:1px solid #f5b301;color:#f5b301;font-size:12px;font-weight:700;padding:4px 10px;border-radius:5px;font-family:'Courier New',monospace}
 .rs{font-size:15px;margin:6px 0;color:#e8eaf2;line-height:1.55}
+.ts{color:#5a5f7a;font-size:12px;letter-spacing:1px;margin-top:8px}
 .empty{color:#9aa0b4;font-size:15px}
 .foot{margin-top:40px;color:#5a5f7a;font-size:12px;letter-spacing:3px;text-align:center}
 """
+
+_DEMO_SCRIPT = """
+<script>
+const SAMPLE_PHISH = __PHISH__;
+const SAMPLE_LEGIT = __LEGIT__;
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function loadSample(w) {
+  document.getElementById('rawmail').value = (w === 'phish' ? SAMPLE_PHISH : SAMPLE_LEGIT);
+}
+async function analyzeEmail() {
+  const b = document.getElementById('go'), o = document.getElementById('aresult');
+  const r = document.getElementById('rawmail').value.trim();
+  if (!r) { o.innerHTML = "<p class='empty'>Paste an email first.</p>"; return; }
+  b.textContent = 'ANALYZING...';
+  try {
+    const q = await fetch('/analyze', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({raw_email: r})});
+    if (!q.ok) throw new Error('HTTP ' + q.status);
+    const v = await q.json();
+    const n = {phishing: '#ff4d2e', legitimate: '#34d399', needs_review: '#f5b301'}[v.verdict] || '#8a93a6';
+    let c = '';
+    (v.evidence || []).forEach(e => { c += "<span class='tag'>" + esc(e.check) + "</span>"; });
+    if (!c) c = "<span class='tag'>clean</span>";
+    let s = '';
+    (v.reasons || []).forEach(x => { s += "<div class='rs'>- " + esc(x) + "</div>"; });
+    o.innerHTML = "<div class='card' style='--neon:" + n + "'><div class='card-head'><span class='verdict'>"
+      + esc(v.verdict).toUpperCase() + "</span><span class='conf'>TRUST " + v.confidence
+      + "</span></div><div class='tbar'><div class='tfill' style='width:" + Math.round(v.confidence * 100)
+      + "%'></div></div><div class='chips'>" + c + "</div>" + s + "</div>";
+  } catch (e) { o.innerHTML = "<p class='empty'>Analysis failed: " + esc(e.message) + "</p>"; }
+  b.textContent = 'ANALYZE';
+}
+</script>
+"""
+
+
+@app.get("/")
+def root():
+    return RedirectResponse(url="/report")
 
 
 @app.get("/health")
@@ -96,6 +150,24 @@ def report():
     neon = {"phishing": "#ff4d2e", "legitimate": "#34d399", "needs_review": "#f5b301"}
     labels = {"phishing": "PHISHING", "legitimate": "LEGITIMATE", "needs_review": "NEEDS REVIEW"}
 
+    forward_line = (
+        f"<div class='sub'>&#9993; FORWARD SUSPICIOUS MAIL TO: {FORWARD_TO}</div>"
+        if FORWARD_TO else ""
+    )
+
+    demo = (
+        "<div class='card' style='--neon:#f5b301'>"
+        "<div class='card-head'><span class='verdict'>TRY IT LIVE</span>"
+        "<span class='conf'>PASTE A RAW EMAIL</span></div>"
+        "<textarea id='rawmail' rows='5' placeholder='Paste a full raw email here, or load a sample...'></textarea>"
+        "<div style='margin-top:10px'>"
+        "<button class='dl' onclick=\"loadSample('phish')\">SAMPLE PHISH</button>"
+        "<button class='dl' onclick=\"loadSample('legit')\" style='margin-left:10px'>SAMPLE LEGIT</button>"
+        "<button class='dl' id='go' onclick='analyzeEmail()' style='margin-left:10px'>ANALYZE</button>"
+        "</div><div id='aresult' style='margin-top:12px'></div></div>"
+        + _DEMO_SCRIPT.replace("__PHISH__", json.dumps(SAMPLE_PHISH)).replace("__LEGIT__", json.dumps(SAMPLE_LEGIT))
+    )
+
     cards = []
     for v in reversed(rows):
         vd = v.get("verdict", "needs_review")
@@ -103,15 +175,18 @@ def report():
         conf = v.get("confidence", 0)
         chips = "".join(f"<span class='tag'>{e['check']}</span>"
                         for e in v.get("evidence", []))
+        ts = v.get("logged_at", "")
+        ts_html = f"<div class='ts'>LOGGED {ts}</div>" if ts else ""
         cards.append(
             f"<div class='card' style='--neon:{c}'>"
             f"<div class='card-head'><span class='verdict'>{vd.upper()}</span>"
             f"<span class='conf'>TRUST {conf}</span></div>"
             f"<div class='tbar'><div class='tfill' style='width:{int(conf * 100)}%'></div></div>"
             f"<div class='chips'>{chips or '<span class=tag>clean</span>'}</div>"
+            f"{ts_html}"
             f"</div>"
         )
-    body = "\n".join(cards) or "<p class='empty'>No verdicts logged yet. Forward an email to the inbox.</p>"
+    body = "\n".join(cards) or "<p class='empty'>No verdicts logged yet. Try the analyzer above.</p>"
 
     dist = "".join(
         f"<div class='drow'><span class='dl2'>{labels[k]}</span>"
@@ -133,10 +208,11 @@ def report():
         "<!DOCTYPE html><html><head><title>PHISHSQUAD // Threat Desk</title>"
         f"<style>{_DASH_CSS}</style></head><body><div class='wrap'>"
         "<div class='topbar'><div><h1>◈ PHISHSQUAD</h1>"
-        "<div class='sub'>THREAT DESK // LIVE VERDICTS</div></div>"
+        "<div class='sub'>THREAT DESK // LIVE VERDICTS</div>"
+        f"{forward_line}</div>"
         "<div><a class='dl' href='/redteam' style='margin-right:10px'>⚔ RED TEAM</a>"
         "<a class='dl' href='/report/download'>⬇ DOWNLOAD REPORT</a></div></div>"
-        + stats + f"<div class='dist'>{dist}</div>" + body +
+        + demo + stats + f"<div class='dist'>{dist}</div>" + body +
         "<div class='foot'>PHISHSQUAD // NEBIUS × NVIDIA HACKATHON</div>"
         "</div></body></html>"
     )
