@@ -10,7 +10,8 @@ import json
 import os
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+
 
 from .schemas import AnalyzeRequest, Verdict
 from .extractor import extract
@@ -19,6 +20,9 @@ from .validator import validate
 from .evidence import collect_evidence
 
 app = FastAPI(title="PhishSquad")
+@app.get("/")
+def root():
+    return RedirectResponse(url="/report")
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VERDICT_LOG = os.path.join(ROOT, "verdicts.jsonl")
 REDTEAM_RESULTS = os.path.join(ROOT, "redteam", "results.json")
