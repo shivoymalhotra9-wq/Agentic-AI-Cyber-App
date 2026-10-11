@@ -131,6 +131,8 @@ def check_display_name_spoof(email: ExtractedEmail) -> Optional[EvidenceItem]:
                        f"but sender domain is {domain}",
             )
     return None
+
+
 _CREDENTIAL_WORDS = (
     "verify your password",
     "confirm your password",
@@ -144,15 +146,23 @@ _CREDENTIAL_WORDS = (
     "log in to verify",
     "login to verify",
     "sign in to confirm",
+    "verify your payment",
+    "confirm your payment",
+    "update your payment",
+    "verify your billing",
+    "update your billing",
+    "could not be verified",
 )
 
 
 def check_credential_harvest(email: ExtractedEmail) -> Optional[EvidenceItem]:
-    """Credential-harvest language paired with a link.
+    """Harvest language (credentials or payment) paired with a link.
 
     'Verify your password' + somewhere to click. Either alone is noisy
     (colleagues mention passwords; newsletters are full of links);
-    together they're the phish shape. Added Oct 10 (coverage check #2).
+    together they're the phish shape. Added Oct 10 (coverage check #2);
+    payment phrases added Oct 11 after a forwarded storage lure slipped
+    the acquittal band.
     """
     if not email.urls:
         return None
@@ -162,7 +172,7 @@ def check_credential_harvest(email: ExtractedEmail) -> Optional[EvidenceItem]:
         return None
     return EvidenceItem(
         check="credential_harvest",
-        detail=f"Credential-harvest language ('{hit}') "
+        detail=f"Harvest language ('{hit}') "
                f"paired with {len(email.urls)} link(s)",
     )
 
@@ -321,4 +331,3 @@ def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     items.extend(check_tavily_threat(email))
     items.extend(check_new_sender(email))
     return items
-

@@ -242,9 +242,10 @@
     "label": "spam",
     "label_conf": "high",
     "expected": "legitimate",
-    "got": "legitimate",
-    "conf": 0.95,
+    "got": "needs_review",
+    "conf": 0.0,
     "checks": [
+      "tavily_threat",
       "new_sender"
     ],
     "error": null
@@ -407,7 +408,7 @@
     "label_conf": "high",
     "expected": "phishing",
     "got": "needs_review",
-    "conf": 0.0,
+    "conf": 0.7,
     "checks": [
       "reply_to_mismatch",
       "new_sender"
@@ -419,7 +420,7 @@
     "label": "spam",
     "label_conf": "high",
     "expected": "legitimate",
-    "got": "legitimate",
+    "got": "needs_review",
     "conf": 0.5,
     "checks": [
       "tavily_threat",
@@ -639,7 +640,7 @@
     "label": "spam",
     "label_conf": "high",
     "expected": "legitimate",
-    "got": "legitimate",
+    "got": "needs_review",
     "conf": 0.5,
     "checks": [
       "tavily_threat",

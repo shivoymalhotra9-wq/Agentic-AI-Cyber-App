@@ -30,7 +30,12 @@ _CHECK_WEIGHTS = {
 }
 
 _TRUST_PHISHING = 0.35   # at or below: evidence convicts on its own
-_TRUST_CLEAN = 0.75      # at or above: evidence acquits on its own
+_TRUST_CLEAN = 0.90      # at or above: evidence acquits on its own.
+                         # Raised 0.75 -> 0.90 Oct 11: a forwarded payment
+                         # lure scored exactly 0.75 and was auto-acquitted
+                         # while the model said phishing. Acquittal now
+                         # requires near-silent evidence.
+
 
 
 def trust_score(evidence: List[EvidenceItem]) -> float:
