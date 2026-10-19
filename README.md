@@ -15,7 +15,7 @@ Forward a suspicious email — PhishSquad gathers the forensic evidence <i>first
 Most "AI phishing detectors" paste an email into a chatbot and trust whatever comes back. PhishSquad doesn't. A deterministic evidence layer and an independent trust scorer surround the language model, so the final verdict is grounded in checkable facts — and every decision lands in a timestamped audit log.
 Forward-to triage — forward any suspicious email to phishsquadinbox@gmail.com; it is analyzed and the verdict posted to a live threat desk.
 Try-it-live desk — paste a raw email on the demo page (or hit SAMPLE PHISH) and watch the pipeline judge it in seconds.
-Red-Team Mode — a built-in adversarial battery (prompt injection, prompt extraction, phishing and legitimate controls) that attacks our own classifier and publishes the score.
+Red-team battery — 16 adversarial attacks (prompt injection, prompt extraction, phishing and legitimate controls) fired at our own classifier; the findings are published as a risk register: risk → attack → mitigation → status.
 [!IMPORTANT]
 Judges: open the live demo, click SAMPLE PHISH → ANALYZE, then visit RISK REGISTER to see what we tested against our own model, what broke, and what we fixed. A monitor pings the app every 5 minutes to keep the free-tier host warm; if you still catch a cold start, allow ~50s for the first load.
 🏗️ Architecture
