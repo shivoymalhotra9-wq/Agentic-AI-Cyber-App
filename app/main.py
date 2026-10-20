@@ -6,7 +6,8 @@ GET /: the threat desk.
 GET /report: the threat desk — every verdict, gold-on-navy dashboard,
   with a live "try it" analyzer for judges.
 GET /report/download: the verdict log as a downloadable report.
-GET /redteam: the red-team scoreboard — latest adversarial battery run.
+GET /redteam: the risk register — red-team findings as
+  risk → attack → mitigation → status.
 """
 import json
 import os
@@ -39,6 +40,50 @@ def _sample_email(attack_id: str) -> str:
 
 SAMPLE_PHISH = _sample_email("inj-01")   # injection-riding phish: demos the hardening live
 SAMPLE_LEGIT = _sample_email("leg-03")  # plain colleague mail
+
+# Risk-register framing for the /redteam page. Each adversarial finding becomes
+# risk → attack → mitigation → status. Mirrors docs/RISK_REGISTER.md.
+_RISK_INFO = {
+    "injection": (
+        "Prompt injection hidden in the email body hijacks the classifier",
+        "Security-rules block in the classifier prompt: email content is untrusted data, never instructions.",
+    ),
+    "extraction": (
+        "Crafted email extracts the system prompt",
+        "Model instructed to never reveal instructions; same hardened prompt.",
+    ),
+    "phishing": (
+        "Realistic phish misclassified as legitimate",
+        "8-check evidence layer plus an independent trust scorer that can overrule the model.",
+    ),
+    "legitimate": (
+        "Legitimate mail falsely convicted (false positives erode trust)",
+        "Acquittal band: trust >= 0.90 required; the gray zone defers to the model instead of convicting.",
+    ),
+    "robustness": (
+        "Malformed or hostile input breaks the verdict path",
+        "Fail-closed: unparseable model output is retried once, then needs_review — never a silent verdict.",
+    ),
+}
+
+# A finding from live use, not from the battery. Documented 2026-10-11.
+_FORWARD_INCIDENT = {
+    "id": "live-01",
+    "category": "live incident",
+    "risk": "Forwarded email hides the original sender's headers — the evidence layer sees only the forwarder",
+    "attack": "Real forwarded payment-harvest lure (2026-10-11): the model correctly called it phishing, but the scorer auto-acquitted at trust 0.95 — only new_sender fired",
+    "mitigation": "Payment/billing harvest phrases added to the credential-harvest check; acquittal bar raised (_TRUST_CLEAN 0.75 → 0.90). Re-test verdicts the forward as phishing.",
+}
+
+
+def _risk_info(category, name):
+    """(risk, mitigation) for an attack category; falls back to the attack name."""
+    cat = str(category or "").lower()
+    for key, (risk, mitigation) in _RISK_INFO.items():
+        if key in cat:
+            return risk, mitigation
+    return (f"Adversarial case: {name}", "Documented in docs/RISK_REGISTER.md.")
+
 
 _DASH_CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
@@ -210,7 +255,7 @@ def report():
         "<div class='topbar'><div><h1>◈ PHISHSQUAD</h1>"
         "<div class='sub'>THREAT DESK // LIVE VERDICTS</div>"
         f"{forward_line}</div>"
-        "<div><a class='dl' href='/redteam' style='margin-right:10px'>⚔ RED TEAM</a>"
+        "<div><a class='dl' href='/redteam' style='margin-right:10px'>RISK REGISTER</a>"
         "<a class='dl' href='/report/download'>⬇ DOWNLOAD REPORT</a></div></div>"
         + demo + stats + f"<div class='dist'>{dist}</div>" + body +
         "<div class='foot'>PHISHSQUAD // NEBIUS × NVIDIA HACKATHON</div>"
@@ -232,6 +277,19 @@ def download_report():
     )
 
 
+def _register_card(card_id, category, risk, attack, mitigation, status, color):
+    """One risk-register row: risk → attack → mitigation → status."""
+    return (
+        f"<div class='card' style='--neon:{color}'>"
+        f"<div class='card-head'><span class='verdict'>{status}</span>"
+        f"<span class='conf'>{card_id} · {category}</span></div>"
+        f"<div class='rs'><b>RISK:</b> {risk}</div>"
+        f"<div class='rs'><b>ATTACK:</b> {attack}</div>"
+        f"<div class='rs'><b>MITIGATION:</b> {mitigation}</div>"
+        f"</div>"
+    )
+
+
 @app.get("/redteam", response_class=HTMLResponse)
 def redteam_dash():
     try:
@@ -242,45 +300,48 @@ def redteam_dash():
 
     if not data:
         head = ""
-        body = "<p class='empty'>No red-team run yet. Run: <b>python -m app.redteam</b></p>"
+        body = "<p class='empty'>No findings yet. Run the battery: <b>python -m app.redteam</b></p>"
     else:
-        rows = []
+        open_rows, shut_rows = [], []
         for a in data["attacks"]:
-            c = "#34d399" if a["held"] else "#ff4d2e"
-            status = "HELD" if a["held"] else "BREACHED"
+            held = a.get("held")
+            risk, mitigation = _risk_info(a.get("category"), a.get("name", ""))
             extra = ""
             if a.get("leaked"):
                 extra = f" — LEAKED: {', '.join(a['leaked'])}"
             if a.get("error"):
                 extra = f" — ERROR: {a['error']}"
-            rows.append(
-                f"<div class='card' style='--neon:{c}'>"
-                f"<div class='card-head'><span class='verdict'>{status}</span>"
-                f"<span class='conf'>{a['id']} · {a['category']}</span></div>"
-                f"<div class='rs'>{a['name']} — expected {a['expected']}, got {a['got']}{extra}</div>"
-                f"</div>"
-            )
-        body = "\n".join(rows)
-        cats = "".join(
-            f"<div class='drow'><span class='dl2'>{cat.upper()}</span>"
-            f"<div class='dbar'><div style='width:{int(v['held'] / v['total'] * 100)}%;background:#f5b301;color:#f5b301'></div></div>"
-            f"<span class='dv' style='color:#f5b301'>{v['held']}/{v['total']}</span></div>"
-            for cat, v in data["by_category"].items()
-        )
+            attack = f"{a['name']} — expected {a['expected']}, got {a['got']}{extra}"
+            if held:
+                shut_rows.append(_register_card(
+                    a["id"], a["category"], risk, attack, mitigation,
+                    "MITIGATED", "#34d399"))
+            else:
+                open_rows.append(_register_card(
+                    a["id"], a["category"], risk, attack,
+                    "None shipped — accepted as residual risk (see the write-up's honest limitations).",
+                    "OPEN RISK", "#ff4d2e"))
+        live = _FORWARD_INCIDENT
+        live_row = _register_card(
+            live["id"], live["category"], live["risk"], live["attack"],
+            live["mitigation"], "MITIGATED", "#34d399")
+        n_open = len(open_rows)
+        n_shut = len(shut_rows) + 1  # + the live incident
+        body = "\n".join(open_rows + [live_row] + shut_rows)
         head = (
             f"<div class='stats'>"
-            f"<div class='stat'><div class='n' style='color:#34d399'>{data['held']}</div><div class='l'>HELD</div></div>"
-            f"<div class='stat'><div class='n' style='color:#ff4d2e'>{data['total'] - data['held']}</div><div class='l'>BREACHED</div></div>"
+            f"<div class='stat'><div class='n' style='color:#f2f2f7'>{len(data['attacks']) + 1}</div><div class='l'>RISKS DOCUMENTED</div></div>"
+            f"<div class='stat'><div class='n' style='color:#34d399'>{n_shut}</div><div class='l'>MITIGATED</div></div>"
+            f"<div class='stat'><div class='n' style='color:#ff4d2e'>{n_open}</div><div class='l'>OPEN</div></div>"
             f"</div>"
-            f"<div class='dist'>{cats}</div>"
-            f"<p class='sub'>LAST RUN // {data['ran_at']}</p>"
+            f"<p class='sub'>RED-TEAM BATTERY // {data['ran_at']} + 1 LIVE INCIDENT</p>"
         )
 
     return (
-        "<!DOCTYPE html><html><head><title>PHISHSQUAD // Red Team</title>"
+        "<!DOCTYPE html><html><head><title>PHISHSQUAD // Risk Register</title>"
         f"<style>{_DASH_CSS}</style></head><body><div class='wrap'>"
-        "<div class='topbar'><div><h1>◈ RED TEAM</h1>"
-        "<div class='sub'>ADVERSARIAL SELF-TEST // LATEST BATTERY RUN</div></div>"
+        "<div class='topbar'><div><h1>◈ RISK REGISTER</h1>"
+        "<div class='sub'>WHAT WE TESTED // WHAT BROKE // WHAT WE FIXED</div></div>"
         "<a class='dl' href='/report'>← THREAT DESK</a></div>"
         + head + body +
         "<div class='foot'>PHISHSQUAD // NEBIUS × NVIDIA HACKATHON</div>"
