@@ -1,7 +1,8 @@
 """Station 2: the detectives' office.
 
 Deterministic checks plus network-backed checks (domain age via RDAP,
-sender- and link-domain threat intel via Tavily). Each check inspects the
+sender- and link-domain threat intel plus landing-page content via
+Tavily). Each check inspects the
 extracted facts and returns EvidenceItem notes. The notes travel
 forward to brief the classifier and feed the validator's trust score.
 Witnesses, not judges.
@@ -332,6 +333,86 @@ def check_tavily_link_threat(email: ExtractedEmail) -> List[EvidenceItem]:
 _HISTORY_PATH = os.path.join(os.path.dirname(__file__), "..", "sender_history.json")
 
 
+_EXTRACT_CACHE: dict = {}
+
+
+def _tavily_extract(urls: list) -> dict:
+    """Fetch landing-page content via Tavily Extract; cached per URL so a
+    page is never fetched twice. Failures are cached as empty — no
+    retrying a dead page on every email."""
+    key = os.environ.get("TAVILY_API_KEY", "")
+    pending = [u for u in urls if u not in _EXTRACT_CACHE]
+    if pending and key:
+        try:
+            req = urllib.request.Request(
+                "https://api.tavily.com/extract",
+                data=json.dumps({
+                    "api_key": key,
+                    "urls": pending,
+                    "query": "login password sign in verify account",
+                    "extract_depth": "basic",
+                }).encode(),
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=15) as r:
+                for res in json.load(r).get("results", []):
+                    _EXTRACT_CACHE[res.get("url", "")] = res
+        except Exception:
+            pass
+        for u in pending:
+            _EXTRACT_CACHE.setdefault(u, {})
+    return {u: _EXTRACT_CACHE[u] for u in urls if _EXTRACT_CACHE.get(u)}
+
+
+_LANDING_HARVEST_WORDS = (
+    "password",
+    "credit card",
+    "card number",
+    "cvv",
+    "sign in",
+    "log in",
+    "verify your identity",
+)
+
+
+def check_landing_page_harvest(email: ExtractedEmail) -> List[EvidenceItem]:
+    """Landing-page check: does the link open a credential-harvesting page?
+
+    The email itself may look clean — no harvest language, innocent
+    sender — while the page it links to does the stealing. Fetches up to
+    2 suspect link pages (skipping trusted brands and the sender domain)
+    and scans the rendered text for harvest language. Added Oct 19 for
+    the Best Use of Tavily push.
+    """
+    sender_domain = _domain_of(email.from_addr)
+    candidates = []
+    seen = set()
+    for u in email.urls:
+        try:
+            netloc = urlparse(u).netloc.lower().split(":")[0]
+        except Exception:
+            continue
+        if not netloc or netloc in seen:
+            continue
+        seen.add(netloc)
+        if _is_trusted_domain(netloc) or netloc == sender_domain:
+            continue
+        candidates.append(u)
+        if len(candidates) >= 2:
+            break
+    items: List[EvidenceItem] = []
+    for url, page in _tavily_extract(candidates).items():
+        text = (page.get("title", "") + " " + page.get("content", "")).lower()
+        hit = next((w for w in _LANDING_HARVEST_WORDS if w in text), None)
+        if hit:
+            items.append(EvidenceItem(
+                check="landing_page_harvest",
+                detail=f"Landing page {urlparse(url).netloc} asks for '{hit}'",
+                url=url,
+            ))
+    return items
+
+
 def check_new_sender(email: ExtractedEmail) -> List[EvidenceItem]:
     """First contact: note it, and file the sender away for next time."""
     sender = _bare_addr(email.from_addr)
@@ -373,5 +454,6 @@ def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     items.extend(check_new_domain(email))
     items.extend(check_tavily_threat(email))
     items.extend(check_tavily_link_threat(email))
+    items.extend(check_landing_page_harvest(email))
     items.extend(check_new_sender(email))
     return items

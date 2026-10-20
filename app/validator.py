@@ -20,7 +20,9 @@ from .schemas import Verdict, EvidenceItem
 # new_sender near-zero (fires on 70% of all mail).
 # Oct 19: tavily_link_threat added at 0.35 — same signal class as
 # sender-domain intel (0.45) but slightly noisier, since a compromised
-# legit domain can host a bad link.
+# legit domain can host a bad link. landing_page_harvest at 0.30: a page
+# that harvests is stronger than harvest language in the email (0.25);
+# paired with a link-threat hit (0.35) the two convict on their own.
 _CHECK_WEIGHTS = {
     "tavily_threat": 0.45,      # threat intel names the domain: strongest
     "auth_results_fail": 0.35,  # the mail server's own fraud checks failed
@@ -31,6 +33,7 @@ _CHECK_WEIGHTS = {
     "display_name_spoof": 0.30,  # name tag claims a brand the domain doesn't own
     "credential_harvest": 0.25,  # credential-bait language paired with a link
     "tavily_link_threat": 0.35,  # threat intel names a LINK domain (Oct 19)
+    "landing_page_harvest": 0.30,  # the linked page itself harvests credentials (Oct 19)
 }
 
 _TRUST_PHISHING = 0.35   # at or below: evidence convicts on its own
