@@ -49,7 +49,7 @@ flowchart LR
 | Station | Job | Trust model |
 |---|---|---|
 | **1 · Extractor** | Pure-stdlib parsing. Unwraps multipart and HTML-only mail (tag-stripping + `href` extraction); pulls headers, links, attachments, authentication results. | No AI, no network — fully deterministic |
-| **2 · Evidence** | Eight checks inspect the extracted facts; each hit becomes a note card. | Witnesses, not judges — checks report, they never decide |
+| **2 · Evidence** | Ten checks inspect the extracted facts; each hit becomes a note card. | Witnesses, not judges — checks report, they never decide |
 | **3 · Classifier** | Nemotron Super reads a structured FACTS brief (headers, body, URLs, evidence notes) and returns a verdict statement with reasons. A security-rules block hardens it against prompt injection and extraction. | The investigator — reasons over facts, never sees raw trust |
 | **4 · Validator** | Discards the model's self-reported confidence and scores the email from evidence alone. | The supervisor — can overrule the model, and the audit log keeps the receipts |
 

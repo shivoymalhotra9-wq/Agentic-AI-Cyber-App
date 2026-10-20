@@ -55,7 +55,7 @@ _RISK_INFO = {
     ),
     "phishing": (
         "Realistic phish misclassified as legitimate",
-        "8-check evidence layer plus an independent trust scorer that can overrule the model.",
+        "10-check evidence layer plus an independent trust scorer that can overrule the model.",
     ),
     "legitimate": (
         "Legitimate mail falsely convicted (false positives erode trust)",
