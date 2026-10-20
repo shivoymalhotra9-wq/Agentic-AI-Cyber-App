@@ -1,7 +1,7 @@
 """Station 2: the detectives' office.
 
-Deterministic checks plus two network-backed checks (domain age via
-RDAP, sender-domain threat intel via Tavily). Each check inspects the
+Deterministic checks plus network-backed checks (domain age via RDAP,
+sender- and link-domain threat intel via Tavily). Each check inspects the
 extracted facts and returns EvidenceItem notes. The notes travel
 forward to brief the classifier and feed the validator's trust score.
 Witnesses, not judges.
@@ -286,6 +286,49 @@ def check_tavily_threat(email: ExtractedEmail) -> List[EvidenceItem]:
     return []
 
 
+def check_tavily_link_threat(email: ExtractedEmail) -> List[EvidenceItem]:
+    """Link-domain threat intel: the sender may be an innocent forwarder,
+    but the links tell the truth.
+
+    Runs the same threat-intel query over each distinct link domain
+    (skipping trusted brands and the sender domain itself, which the
+    sender check already covers). Capped at 5 domains per email to bound
+    API spend; results ride the shared Tavily cache. Added Oct 19 for the
+    Best Use of Tavily push.
+    """
+    sender_domain = _domain_of(email.from_addr)
+    seen = set()
+    checked = 0
+    items: List[EvidenceItem] = []
+    for u in email.urls:
+        try:
+            netloc = urlparse(u).netloc.lower().split(":")[0]
+        except Exception:
+            continue
+        if not netloc or netloc in seen:
+            continue
+        seen.add(netloc)
+        if _is_trusted_domain(netloc):
+            continue  # the real thing, not a suspect
+        if netloc == sender_domain:
+            continue  # sender check already covers this one
+        checked += 1
+        if checked > 5:
+            break
+        for r in _tavily_search(netloc):
+            text = (r.get("title", "") + " " + r.get("content", "")).lower()
+            named = netloc in r.get("title", "").lower() or netloc in r.get("url", "").lower()
+            if named and any(w in text for w in _THREAT_WORDS):
+                items.append(EvidenceItem(
+                    check="tavily_link_threat",
+                    detail=f"Threat intel implicates link domain {netloc} "
+                           f"in phishing/scam activity",
+                    url=r.get("url"),
+                ))
+                break
+    return items
+
+
 _HISTORY_PATH = os.path.join(os.path.dirname(__file__), "..", "sender_history.json")
 
 
@@ -329,5 +372,6 @@ def collect_evidence(email: ExtractedEmail) -> List[EvidenceItem]:
     items.extend(check_auth_results_fail(email))
     items.extend(check_new_domain(email))
     items.extend(check_tavily_threat(email))
+    items.extend(check_tavily_link_threat(email))
     items.extend(check_new_sender(email))
     return items

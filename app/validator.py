@@ -18,6 +18,9 @@ from .schemas import Verdict, EvidenceItem
 # auth_results_fail promoted (2/2 precision); reply_to_mismatch and
 # lookalike_domain demoted (fired on legit as often as phish);
 # new_sender near-zero (fires on 70% of all mail).
+# Oct 19: tavily_link_threat added at 0.35 — same signal class as
+# sender-domain intel (0.45) but slightly noisier, since a compromised
+# legit domain can host a bad link.
 _CHECK_WEIGHTS = {
     "tavily_threat": 0.45,      # threat intel names the domain: strongest
     "auth_results_fail": 0.35,  # the mail server's own fraud checks failed
@@ -27,6 +30,7 @@ _CHECK_WEIGHTS = {
     "new_sender": 0.05,         # first contact: weakest signal
     "display_name_spoof": 0.30,  # name tag claims a brand the domain doesn't own
     "credential_harvest": 0.25,  # credential-bait language paired with a link
+    "tavily_link_threat": 0.35,  # threat intel names a LINK domain (Oct 19)
 }
 
 _TRUST_PHISHING = 0.35   # at or below: evidence convicts on its own
