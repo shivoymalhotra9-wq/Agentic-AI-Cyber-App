@@ -130,12 +130,12 @@ Token Factory is our Nebius surface — we use no other Nebius services. (Tavily
 
 The evidence layer queries **Tavily** for threat intelligence on each sender domain — cached per process, with trusted brands and their true subdomains bypassed so legitimate brand mail is not flagged by its own search results. A domain named in phishing/scam reporting becomes the single heaviest evidence card in the trust score.
 
-## ⚔️ Red-Team Mode
+## 🛡️ Risk register — from red-teaming our own model
 
-`redteam/attacks.json` holds 16 adversarial cases: 5 prompt injections, 2 prompt extractions, 5 phishing controls, 3 legitimate controls, 1 robustness case. The runner fires each at the full pipeline and scores whether the defense *held*.
+`redteam/attacks.json` holds a 16-attack adversarial battery: 5 prompt injections, 2 prompt extractions, 5 phishing controls, 3 legitimate controls, 1 robustness case. The runner fires each at the full pipeline and scores whether the defense *held*.
 
 - **First run: 10/16. After prompt hardening: 14/16** — injection 5/5, extraction 2/2 with zero prompt leakage.
-- Live scoreboard: `/redteam` on the demo.
+- On the demo, the `/redteam` page presents these findings as a **risk register** rather than a raw scoreboard: each row is the risk → the attack we ran → the mitigation shipped → its status. The two misses are listed as openly acknowledged residual risks.
 
 ## 📜 Governance
 
