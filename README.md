@@ -80,8 +80,10 @@ The same pipeline is exposed directly: `POST /analyze` with `{"raw_email": "..."
 |---|---|---|
 | `tavily_threat` | 0.45 | Threat intel implicating the sender domain (Tavily) |
 | `auth_results_fail` | 0.35 | SPF/DKIM/DMARC failures reported by the receiving server |
+| `tavily_link_threat` | 0.35 | Threat intel implicating a *link* domain — the sender may be an innocent forwarder (Tavily) |
 | `lookalike_domain` | 0.30 | Brand mimicry (`paypa1-secure.com`) in sender or link domains |
 | `display_name_spoof` | 0.30 | Name tag claims a brand the sender domain doesn't own |
+| `landing_page_harvest` | 0.30 | A linked page itself asks for credentials — the email can look clean while the page harvests (Tavily Extract) |
 | `reply_to_mismatch` | 0.25 | Replies routed to a different domain than the sender |
 | `credential_harvest` | 0.25 | Credential *or payment* harvest language paired with a link |
 | `new_domain` | 0.20 | Sender domain registered < 30 days ago (RDAP) |
@@ -128,7 +130,13 @@ Token Factory is our Nebius surface — we use no other Nebius services. (Tavily
 
 ## 🌐 Tavily threat intel
 
-The evidence layer queries **Tavily** for threat intelligence on each sender domain — cached per process, with trusted brands and their true subdomains bypassed so legitimate brand mail is not flagged by its own search results. A domain named in phishing/scam reporting becomes the single heaviest evidence card in the trust score.
+The evidence layer uses **Tavily** three ways — all cached per process, with trusted brands and their true subdomains bypassed so legitimate brand mail is never flagged by its own search results:
+
+- **Sender-domain intel** (`tavily_threat`, 0.45): threat intelligence on the sender domain. A domain named in phishing/scam reporting becomes the single heaviest evidence card in the trust score.
+- **Link-domain intel** (`tavily_link_threat`, 0.35): the same background check run over every distinct *link* domain — because in a forwarded email the sender is just the forwarder. Capped at 5 domains per email.
+- **Landing-page content** (`landing_page_harvest`, 0.30): Tavily Extract fetches up to 2 suspect link pages and scans the rendered text for credential-harvest language. The email can look clean while the page does the stealing.
+
+Every Tavily-sourced evidence card links out to its source on the threat desk, so each claim carries its receipts.
 
 ## 🛡️ Risk register — from red-teaming our own model
 
