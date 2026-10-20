@@ -9,6 +9,7 @@ GET /report/download: the verdict log as a downloadable report.
 GET /redteam: the risk register — red-team findings as
   risk → attack → mitigation → status.
 """
+import html
 import json
 import os
 
@@ -114,6 +115,7 @@ textarea{width:100%;background:#0a0a18;color:#e8eaf2;border:1px solid #2a2a4e;bo
 .tfill{height:100%;border-radius:5px;background:var(--neon);box-shadow:0 0 10px var(--neon)}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .tag{background:rgba(245,179,1,.1);border:1px solid #f5b301;color:#f5b301;font-size:12px;font-weight:700;padding:4px 10px;border-radius:5px;font-family:'Courier New',monospace}
+.taglink{text-decoration:none}.taglink .tag{border-style:dashed}
 .rs{font-size:15px;margin:6px 0;color:#e8eaf2;line-height:1.55}
 .ts{color:#5a5f7a;font-size:12px;letter-spacing:1px;margin-top:8px}
 .empty{color:#9aa0b4;font-size:15px}
@@ -139,7 +141,10 @@ async function analyzeEmail() {
     const v = await q.json();
     const n = {phishing: '#ff4d2e', legitimate: '#34d399', needs_review: '#f5b301'}[v.verdict] || '#8a93a6';
     let c = '';
-    (v.evidence || []).forEach(e => { c += "<span class='tag'>" + esc(e.check) + "</span>"; });
+    (v.evidence || []).forEach(e => {
+      const t = "<span class='tag'>" + esc(e.check) + (e.url ? " ⧉" : "") + "</span>";
+      c += e.url ? "<a class='taglink' target='_blank' rel='noopener' title='" + esc(e.detail || "") + "' href='" + esc(e.url) + "'>" + t + "</a>" : t;
+    });
     if (!c) c = "<span class='tag'>clean</span>";
     let s = '';
     (v.reasons || []).forEach(x => { s += "<div class='rs'>- " + esc(x) + "</div>"; });
@@ -185,6 +190,17 @@ def _load_verdicts():
     return rows
 
 
+def _chip(e):
+    """Evidence chip; Tavily-sourced checks link out to their source."""
+    tag = f"<span class='tag'>{e['check']}{' ⧉' if e.get('url') else ''}</span>"
+    if e.get("url"):
+        url = html.escape(e["url"], quote=True)
+        detail = html.escape(e.get("detail", ""), quote=True)
+        return (f"<a class='taglink' target='_blank' rel='noopener' "
+                f"title='{detail}' href='{url}'>{tag}</a>")
+    return tag
+
+
 @app.get("/report", response_class=HTMLResponse)
 def report():
     rows = _load_verdicts()
@@ -218,8 +234,7 @@ def report():
         vd = v.get("verdict", "needs_review")
         c = neon.get(vd, "#8a93a6")
         conf = v.get("confidence", 0)
-        chips = "".join(f"<span class='tag'>{e['check']}</span>"
-                        for e in v.get("evidence", []))
+        chips = "".join(_chip(e) for e in v.get("evidence", []))
         ts = v.get("logged_at", "")
         ts_html = f"<div class='ts'>LOGGED {ts}</div>" if ts else ""
         cards.append(
