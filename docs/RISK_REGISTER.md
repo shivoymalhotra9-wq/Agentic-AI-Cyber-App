@@ -19,3 +19,9 @@ Updated: 2026-10-07.
 ## Risk acceptance notes
 - R5 is accepted (not ignored): the product cannot judge emails without reading them. Controls are in place; redaction is roadmap, not vapor.
 - R1's two open gaps are the benchmark phase's first tuning targets — this register is the reason that phase exists.
+
+## Forward-wrapper blindness (demonstrated live, 2026-10-11)
+- Risk: forwarded emails are judged largely on content — the original sender's authentication arrives as quoted text, not evidence. A forwarded payment-harvest lure was initially auto-acquitted (legitimate, 0.95) while the model correctly classified it phishing; only new_sender fired because the evidence layer saw the forwarder's Gmail.
+- Detection: the audit log preserved the contradiction (verdict legitimate vs. model category phishing, 6/6 phishing reasons).
+- Mitigations shipped: payment/billing harvest phrases added to the credential-harvest check; acquittal bar raised (_TRUST_CLEAN 0.75 → 0.90). Re-test verdicts the forward as phishing.
+- Residual: a clean-looking phish with zero evidence firing still auto-acquits at trust ≥ 0.90.
