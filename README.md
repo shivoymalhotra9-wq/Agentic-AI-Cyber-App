@@ -18,9 +18,9 @@ Forward a suspicious email — PhishSquad gathers the forensic evidence <i>first
 
 ## 🛡️ What it does
 
-Most "AI phishing detectors" paste an email into a chatbot and trust whatever comes back. PhishSquad doesn't. A deterministic evidence layer and an independent trust scorer surround the language model, so the final verdict is grounded in checkable facts — and every decision lands in a timestamped audit log.
+Most "AI phishing detectors" paste an email into a chatbot and trust whatever comes back. PhishSquad doesn't. A deterministic evidence layer and an independent trust scorer surround the language model, so the final verdict is grounded in checkable facts — and every poller decision lands in a timestamped audit log.
 
-- **Forward-to triage** — forward any suspicious email to **phishsquadinbox@gmail.com**; it is analyzed and the verdict posted to a live threat desk.
+- **Forward-to triage** — forward any suspicious email to **phishsquadinbox@gmail.com**; it is analyzed and the verdict posted to a live threat desk (when the poller runs).
 - **Try-it-live desk** — paste a raw email on the demo page (or hit **SAMPLE PHISH**) and watch the pipeline judge it in seconds.
 - **Red-team battery** — 16 adversarial attacks (prompt injection, prompt extraction, phishing and legitimate controls) fired at our own classifier; the findings are published as a risk register: risk → attack → mitigation → status.
 
@@ -32,12 +32,12 @@ Most "AI phishing detectors" paste an email into a chatbot and trust whatever co
 ```mermaid
 flowchart LR
     A["Raw email<br/>forwarded or pasted"] --> B["1 · EXTRACTOR<br/>parse · unwrap HTML<br/>headers · links · auth results"]
-    B --> C["2 · EVIDENCE<br/>8 deterministic checks"]
+    B --> C["2 · EVIDENCE<br/>10 checks"]
     C --> D["3 · CLASSIFIER<br/>Nemotron 3 Super<br/>via Nebius Token Factory"]
     D --> E["4 · VALIDATOR<br/>independent trust score"]
     E --> F["Verdict<br/>+ reasons + evidence cards"]
-    F --> G[("Audit log<br/>verdicts.jsonl")]
-    F --> H["Threat desk<br/>/report"]
+    F --> G[("Audit log<br/>verdicts.jsonl<br/>poller path only")]
+    F --> H["Threat desk<br/>/report<br/>poller verdicts only"]
     C -.-> I["Tavily threat intel"]
     C -.-> J["RDAP domain age"]
     classDef core fill:#14142b,stroke:#f5b301,color:#f2f2f7,stroke-width:2px
@@ -150,6 +150,7 @@ Every Tavily-sourced evidence card links out to its source on the threat desk, s
 - `docs/RISK_REGISTER.md` — known risks and mitigations, including label quality and header-trust caveats.
 - `docs/MODEL_CARD.md` — model, intended use, and limitations.
 - **Audit log** — every verdict timestamped (UTC) with its evidence and reasoning, downloadable from the threat desk.
+  - *Current status:* the log (`verdicts.jsonl`) is written only by the local IMAP poller and is git-ignored, so no log data is committed and the Render demo does not populate it — the live desk is empty until the poller runs. The feature is fully implemented (writer, reader, download endpoint); the demo simply doesn't run the poller.
 
 ## 📊 Evaluation (honest version)
 
