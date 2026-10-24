@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="icon" href="data:," />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <title>NVIDIA Hackathon Runbook</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f5f0;
+      --surface: #ffffff;
+      --surface-2: #e9ebe4;
+      --ink: #111411;
+      --muted: #565d56;
+      --line: #c8cec4;
+      --accent: #5f9500;
+      --accent-strong: #456f00;
+      --accent-soft: #dff4b9;
+      --danger: #b12b22;
+      --danger-soft: #fbe2df;
+      --code: #151a15;
+      --code-ink: #e9f2e4;
+      --shadow: 0 12px 34px rgba(18, 24, 16, .08);
+      --radius: 10px;
+      --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      --sans: "IBM Plex Sans", system-ui, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d100d;
+        --surface: #151915;
+        --surface-2: #202620;
+        --ink: #f0f4ed;
+        --muted: #abb3a8;
+        --line: #343b33;
+        --accent: #84bf22;
+        --accent-strong: #a7d75d;
+        --accent-soft: #263813;
+        --danger: #ff847b;
+        --danger-soft: #3b211f;
+        --code: #080b08;
+        --code-ink: #e9f2e4;
+        --shadow: 0 14px 38px rgba(0, 0, 0, .3);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.62;
+    }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button { font: inherit; }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .skip {
+      position: fixed; left: 12px; top: 10px; z-index: 99;
+      padding: 8px 12px; background: var(--ink); color: var(--bg);
+      transform: translateY(-160%); text-decoration: none;
+    }
+    .skip:focus { transform: none; }
+
+    .layout { width: 100%; max-width: 1360px; min-width: 0; margin: 0 auto; display: grid; grid-template-columns: 250px minmax(0, 1fr); }
+    .rail {
+      position: sticky; top: 0; height: 100vh; padding: 28px 22px 24px;
+      border-right: 1px solid var(--line); background: var(--bg);
+      display: flex; flex-direction: column; gap: 26px;
+    }
+    .rail-mark { display: flex; align-items: center; gap: 10px; }
+    .rail-mark::before { content: ""; width: 22px; height: 22px; background: var(--accent); clip-path: polygon(0 0, 100% 0, 100% 38%, 39% 38%, 39% 100%, 0 100%); }
+    .rail-mark span { font: 600 12px/1.2 var(--mono); letter-spacing: .08em; }
+    .rail-status {
+      border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+      padding: 16px 0;
+    }
+    .phase { font: 600 11px/1.2 var(--mono); color: var(--accent-strong); letter-spacing: .08em; text-transform: uppercase; }
+    .rail-status strong { display: block; margin-top: 6px; font-size: 18px; line-height: 1.25; }
+    .rail-status p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .progress { height: 4px; margin-top: 14px; background: var(--surface-2); overflow: hidden; }
+    .progress > i { display: block; width: 20%; height: 100%; background: var(--accent); }
+    nav { display: grid; gap: 3px; }
+    nav a {
+      display: grid; grid-template-columns: 28px 1fr; align-items: center;
+      padding: 8px 8px; color: var(--muted); text-decoration: none; font-size: 14px;
+      border-left: 2px solid transparent;
+    }
+    nav a span { font: 500 11px var(--mono); }
+    nav a:hover, nav a.active { color: var(--ink); border-left-color: var(--accent); background: var(--surface-2); }
+    .rail-foot { margin-top: auto; color: var(--muted); font: 400 11px/1.5 var(--mono); }
+
+    main { min-width: 0; }
+    .hero {
+      min-height: 560px; padding: 76px clamp(28px, 6vw, 92px) 58px;
+      border-bottom: 1px solid var(--line); background: var(--surface);
+      display: flex; flex-direction: column; justify-content: space-between;
+      position: relative; overflow: hidden;
+    }
+    .hero::after {
+      content: "01"; position: absolute; right: clamp(18px, 4vw, 64px); bottom: -64px;
+      font: 700 clamp(180px, 24vw, 360px)/.8 var(--sans); color: var(--surface-2);
+      letter-spacing: -.08em; pointer-events: none;
+    }
+    .hero-top, .hero-copy, .hero-meta { position: relative; z-index: 1; }
+    .hero-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+    .stamp { font: 600 12px var(--mono); color: var(--accent-strong); letter-spacing: .08em; }
+    .gate { display: inline-flex; align-items: center; gap: 8px; font: 500 12px var(--mono); }
+    .gate::before { content: ""; width: 8px; height: 8px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 0 4px var(--accent-soft); }
+    .hero-copy { max-width: 820px; margin: 80px 0 76px; }
+    h1 { margin: 0; max-width: 760px; font-size: clamp(46px, 7vw, 92px); line-height: .96; letter-spacing: -.055em; font-weight: 700; }
+    .hero-copy p { margin: 26px 0 0; max-width: 670px; color: var(--muted); font-size: clamp(18px, 2vw, 22px); line-height: 1.45; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 10px 26px; font: 500 12px var(--mono); }
+    .hero-meta span { display: inline-flex; align-items: center; gap: 8px; }
+    .hero-meta b { color: var(--accent-strong); }
+
+    .section { padding: 74px clamp(28px, 6vw, 92px); border-bottom: 1px solid var(--line); scroll-margin-top: 18px; }
+    .section.dark { background: var(--code); color: var(--code-ink); }
+    .section-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: end; margin-bottom: 38px; }
+    .eyebrow { margin: 0 0 8px; font: 600 12px var(--mono); color: var(--accent-strong); letter-spacing: .08em; text-transform: uppercase; }
+    .dark .eyebrow { color: #9ccc57; }
+    h2 { margin: 0; font-size: clamp(30px, 4vw, 52px); line-height: 1.04; letter-spacing: -.035em; }
+    .section-intro { max-width: 420px; margin: 0; color: var(--muted); }
+    .dark .section-intro { color: #afb9ad; }
+
+    .story { display: grid; gap: 0; border-top: 1px solid var(--line); }
+    .story-row { display: grid; grid-template-columns: 52px minmax(180px, .75fr) minmax(0, 1.45fr); gap: 22px; padding: 26px 0; border-bottom: 1px solid var(--line); }
+    .story-num { font: 600 13px var(--mono); color: var(--accent-strong); }
+    .story h3 { margin: 0; font-size: 19px; line-height: 1.35; }
+    .story p { margin: 0; color: var(--muted); }
+    .story code { font-family: var(--mono); font-size: .88em; background: var(--surface-2); padding: 2px 5px; }
+
+    .score-wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(260px, .7fr); gap: 42px; align-items: start; }
+    .scoreboard { border: 1px solid #384238; background: #0b0f0b; box-shadow: var(--shadow); }
+    .score-title { padding: 15px 18px; display: flex; justify-content: space-between; gap: 15px; border-bottom: 1px solid #384238; font: 500 12px var(--mono); color: #a9b5a5; }
+    .score-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 14px; }
+    .score-table th, .score-table td { padding: 17px 18px; border-bottom: 1px solid #2d352d; text-align: right; white-space: nowrap; }
+    .score-table th:first-child, .score-table td:first-child { text-align: left; }
+    .score-table th { color: #98a294; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 500; }
+    .score-table tr:last-child td { border-bottom: 0; }
+    .score-table .winner td { color: #dfffae; background: #151e0e; font-weight: 600; }
+    .score-note { margin: 18px 0 0; color: #aab4a7; font-size: 14px; }
+    .verdict { padding: 2px 0 0; }
+    .verdict .big { font-size: clamp(54px, 7vw, 88px); line-height: .9; font-weight: 700; letter-spacing: -.055em; color: #9ed34c; }
+    .verdict h3 { font-size: 25px; margin: 20px 0 12px; }
+    .verdict p { color: #b6c0b3; margin: 0 0 18px; }
+    .stat-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #3a4438; border: 1px solid #3a4438; margin-top: 26px; }
+    .stat-pair > div { background: #121712; padding: 18px; }
+    .stat-pair strong { display: block; color: #eff6ec; font-size: 23px; }
+    .stat-pair span { color: #95a091; font: 400 11px var(--mono); }
+
+    .decisions { display: grid; grid-template-columns: repeat(2, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+    .decision { padding: 26px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .decision .id { font: 600 12px var(--mono); color: var(--accent-strong); }
+    .decision h3 { margin: 24px 0 10px; font-size: 22px; line-height: 1.2; }
+    .decision p { margin: 0; color: var(--muted); }
+    .caveat { margin: 26px 0 0; padding: 18px 20px; background: var(--accent-soft); display: grid; grid-template-columns: auto 1fr; gap: 14px; }
+    .caveat b { font: 600 12px var(--mono); color: var(--accent-strong); }
+    .caveat p { margin: 0; }
+
+    .pipeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; align-items: stretch; }
+    .node { background: var(--surface); border-top: 4px solid var(--line); padding: 18px 16px; min-height: 150px; position: relative; }
+    .node.active { border-top-color: var(--accent); }
+    .node::after { content: "→"; position: absolute; right: -20px; top: 50%; transform: translateY(-50%); font: 600 20px var(--mono); color: var(--muted); z-index: 1; }
+    .node:last-child::after { display: none; }
+    .node small { display: block; color: var(--accent-strong); font: 600 11px var(--mono); }
+    .node h3 { margin: 18px 0 7px; font-size: 18px; }
+    .node p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .stack-swap { margin-top: 34px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+    .swap { background: var(--surface); padding: 19px; }
+    .swap s { display: block; color: var(--muted); font: 500 12px var(--mono); text-decoration-thickness: 1px; }
+    .swap strong { display: block; margin-top: 8px; font-size: 17px; }
+
+    .tech-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+    .btn { border: 1px solid #465046; background: transparent; color: #edf4ea; padding: 10px 14px; cursor: pointer; font: 500 12px var(--mono); }
+    .btn:hover { border-color: #9ed34c; color: #cfff8b; }
+    pre { margin: 0; padding: 22px; background: #080b08; border: 1px solid #313a31; overflow: auto; color: #e8f2e3; font: 400 13px/1.7 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .cmd { color: #caff7d; }
+    .comment { color: #849180; }
+    .output { color: #90cce9; }
+    .toast { min-height: 24px; margin-top: 12px; color: #aada64; font: 500 12px var(--mono); }
+
+    .work-repo { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(260px, .65fr); gap: 42px; align-items: start; }
+    .repo-manifest { border-top: 1px solid var(--line); }
+    .repo-item { display: grid; grid-template-columns: minmax(150px, .7fr) minmax(0, 1.3fr) auto; gap: 20px; align-items: start; padding: 20px 0; border-bottom: 1px solid var(--line); }
+    .repo-item code { font: 500 13px var(--mono); color: var(--accent-strong); overflow-wrap: anywhere; }
+    .repo-item p { margin: 0; color: var(--muted); font-size: 14px; }
+    .repo-tag { padding: 4px 7px; background: var(--surface-2); color: var(--muted); font: 600 10px var(--mono); letter-spacing: .04em; white-space: nowrap; }
+    .repo-tag.safe { background: var(--accent-soft); color: var(--accent-strong); }
+    .repo-history { border-left: 1px solid var(--line); padding-left: 26px; }
+    .repo-history h3 { margin: 0 0 22px; font-size: 22px; }
+    .repo-history article { position: relative; padding: 0 0 26px 22px; }
+    .repo-history article::before { content: ""; position: absolute; left: -31px; top: 7px; width: 8px; height: 8px; background: var(--accent); }
+    .repo-history article:last-child { padding-bottom: 0; }
+    .repo-history time { font: 600 11px var(--mono); color: var(--accent-strong); }
+    .repo-history p { margin: 7px 0 0; color: var(--muted); font-size: 14px; }
+
+    .roadmap { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+    .road-step { background: var(--surface); padding: 20px; min-height: 215px; }
+    .road-step.done { background: var(--accent-soft); }
+    .road-step .rnum { font: 600 11px var(--mono); color: var(--accent-strong); }
+    .road-step h3 { margin: 24px 0 8px; font-size: 18px; line-height: 1.2; }
+    .road-step time { color: var(--muted); font: 400 12px var(--mono); }
+    .road-step p { margin: 14px 0 0; color: var(--muted); font-size: 14px; }
+    .tomorrow { margin-top: 38px; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 28px; padding-top: 28px; border-top: 1px solid var(--line); }
+    .tomorrow .label { font: 600 12px var(--mono); color: var(--accent-strong); }
+    .tomorrow h3 { margin: 0 0 12px; font-size: 27px; }
+    .tomorrow p { margin: 0; max-width: 760px; color: var(--muted); }
+    .tomorrow ul { padding-left: 20px; margin: 16px 0 0; }
+    .tomorrow li { margin: 7px 0; }
+    footer { padding: 30px clamp(28px, 6vw, 92px); display: flex; justify-content: space-between; gap: 20px; color: var(--muted); font: 400 11px var(--mono); }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: minmax(0, 1fr); overflow: hidden; }
+      .rail { position: relative; width: 100%; min-width: 0; height: auto; padding: 16px 20px; border-right: 0; border-bottom: 1px solid var(--line); gap: 12px; }
+      .rail-mark, .rail-status, .rail-foot { display: none; }
+      nav { width: 100%; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+      nav a { flex: 1 1 auto; grid-template-columns: auto; justify-content: center; padding: 8px 10px; border-left: 0; border-bottom: 2px solid transparent; background: var(--surface); }
+      nav a span { display: none; }
+      nav a:hover, nav a.active { border-left: 0; border-bottom-color: var(--accent); }
+      .hero { min-height: 510px; }
+      .score-wrap, .work-repo { grid-template-columns: 1fr; }
+      .pipeline { grid-template-columns: 1fr 1fr; }
+      .node::after { display: none; }
+      .stack-swap { grid-template-columns: 1fr 1fr; }
+      .roadmap { grid-template-columns: 1fr 1fr; }
+      .road-step:last-child { grid-column: 1 / -1; }
+    }
+    @media (max-width: 680px) {
+      body { font-size: 15px; }
+      .hero { min-height: 500px; padding: 42px 22px 38px; }
+      .hero-top { align-items: flex-start; flex-direction: column; }
+      .hero-copy { margin: 66px 0 68px; }
+      h1 { max-width: 100%; font-size: clamp(40px, 13vw, 54px); overflow-wrap: anywhere; }
+      .hero-copy p, .hero-meta span, h2, h3, p { overflow-wrap: anywhere; }
+      .hero::after { font-size: 190px; right: 8px; bottom: -28px; }
+      .section { padding: 54px 22px; }
+      .section-head { grid-template-columns: 1fr; margin-bottom: 28px; }
+      .story-row { grid-template-columns: 34px 1fr; gap: 12px; }
+      .story-row p { grid-column: 2; }
+      .scoreboard { overflow: visible; }
+      .score-title { display: block; }
+      .score-title span:last-child { display: block; margin-top: 4px; }
+      .score-table, .score-table tbody, .score-table tr, .score-table th, .score-table td { display: block; }
+      .score-table thead { display: none; }
+      .score-table tr { padding: 18px; border-bottom: 1px solid #2d352d; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+      .score-table tr:last-child { border-bottom: 0; }
+      .score-table td { padding: 0; border: 0; text-align: left !important; white-space: normal; }
+      .score-table td:first-child { grid-column: 1 / -1; font-size: 18px; }
+      .score-table td:not(:first-child)::before { content: attr(data-label); display: block; color: #8e998a; font: 400 10px var(--mono); text-transform: uppercase; }
+      .decisions { grid-template-columns: 1fr; }
+      .repo-item { grid-template-columns: 1fr; gap: 7px; }
+      .repo-tag { justify-self: start; }
+      .repo-history { margin-top: 6px; }
+      .pipeline, .stack-swap, .roadmap { grid-template-columns: 1fr; }
+      .road-step:last-child { grid-column: auto; }
+      .tomorrow { grid-template-columns: 1fr; gap: 10px; }
+      .stat-pair { grid-template-columns: 1fr; }
+      footer { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#content">Skip to runbook</a>
+  <div class="layout">
+    <aside class="rail" aria-label="Runbook navigation">
+      <div class="rail-mark"><span>BUILD LOG / 2026</span></div>
+      <div class="rail-status">
+        <div class="phase">Phase 1 of 5</div>
+        <strong>Access + model spike</strong>
+        <p>Gate crossed · Sep 28</p>
+        <div class="progress" aria-label="Overall progress: 20 percent"><i></i></div>
+      </div>
+      <nav>
+        <a href="#overview" class="active"><span>00</span>Overview</a>
+        <a href="#day-one"><span>01</span>Day 1</a>
+        <a href="#results"><span>02</span>Results</a>
+        <a href="#decisions"><span>03</span>Decisions</a>
+        <a href="#architecture"><span>04</span>Architecture</a>
+        <a href="#technical"><span>05</span>Technical log</a>
+        <a href="#repository"><span>06</span>Work repository</a>
+        <a href="#roadmap"><span>07</span>Roadmap</a>
+      </nav>
+      <div class="rail-foot">TRACK 2 · BEST APPS &amp; AGENTS<br />TARGET SUBMISSION · OCT 29</div>
+    </aside>
+
+    <main id="content">
+      <header class="hero" id="overview">
+        <div class="hero-top">
+          <div class="stamp">DAY 01 / MON 28 SEP 2026</div>
+          <div class="gate">Phase gate crossed</div>
+        </div>
+        <div class="hero-copy">
+          <h1>Access proved.<br />Model lineup decided.</h1>
+          <p>We connected the project to Nebius, made the first live Nemotron call, and ran a fair 20-email test. The data overturned our original plan: Super earned the primary-classifier job.</p>
+        </div>
+        <div class="hero-meta">
+          <span><b>BUILD RULE</b> Shivoy builds · guided step by step</span>
+          <span><b>DEADLINE</b> Oct 30 · 10:00 AM PT</span>
+          <span><b>TODAY</b> 40 scored model calls</span>
+        </div>
+      </header>
+
+      <section class="section" id="day-one">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">What happened — in plain words</p>
+            <h2>Day 1, from keys to evidence</h2>
+          </div>
+          <p class="section-intro">Every step retired a competition risk before the product build begins.</p>
+        </div>
+        <div class="story">
+          <article class="story-row"><div class="story-num">01</div><h3>Signed up for Nebius</h3><p>Nebius supplies the AI models. The contest requires a real Token Factory call at runtime, so this is the entry ticket—not an optional tool.</p></article>
+          <article class="story-row"><div class="story-num">02</div><h3>Tried the free-credit route</h3><p>The $25 kickoff code was rejected after we checked it carefully. The fallback is the Builders Program credit; the build does not depend on pretending the old code works.</p></article>
+          <article class="story-row"><div class="story-num">03</div><h3>Created and protected the API key</h3><p>The first key was revoked after its one-time view was lost. The replacement lives in <code>.env</code>, limited to the Mac owner, and Git is told never to upload it.</p></article>
+          <article class="story-row"><div class="story-num">04</div><h3>Built a clean Python workspace</h3><p>A virtual environment keeps project packages separate from macOS. This makes the local setup predictable and easier to reproduce when the pipeline is hosted.</p></article>
+          <article class="story-row"><div class="story-num">05</div><h3>Asked the live API for model names</h3><p>The official-looking Nano model ID had the wrong letter case. <code>GET /v1/models</code> gave the exact working IDs. The running service—not copied text—is the source of truth.</p></article>
+          <article class="story-row"><div class="story-num">06</div><h3>Made the first live AI call</h3><p>Nano correctly flagged a fake <code>paypa1</code> email as phishing. That proved the full path: Mac → Nebius → Nemotron → verdict.</p></article>
+          <article class="story-row"><div class="story-num">07</div><h3>Built the 20-email exam</h3><p>We created five examples each of phishing, BEC, legitimate mail, and spam, then sent the same exam to Nano and Super—40 calls in total.</p></article>
+          <article class="story-row"><div class="story-num">08</div><h3>Debugged the setup, not the idea</h3><p>We fixed Python pasted into zsh, missing file sections, and a missing <code>emails.json</code>. A clean rebuild then completed and produced the score table.</p></article>
+        </div>
+      </section>
+
+      <section class="section dark" id="results">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">The model spike</p>
+            <h2>The numbers changed the architecture.</h2>
+          </div>
+          <p class="section-intro">Same 20 emails, same prompt, two models. This is directional evidence—not a final benchmark.</p>
+        </div>
+        <div class="score-wrap">
+          <div>
+            <div class="scoreboard">
+              <div class="score-title"><span>RESULTS / 20 SAMPLES</span><span>5 PHISHING · 5 BEC · 5 LEGIT · 5 SPAM</span></div>
+              <table class="score-table" aria-label="Nano and Super benchmark results">
+                <thead><tr><th>Model</th><th>Exact</th><th>Precision</th><th>Recall</th><th>Avg latency</th></tr></thead>
+                <tbody>
+                  <tr><td>Nano</td><td data-label="Exact">60.0%</td><td data-label="Precision">72.7%</td><td data-label="Recall">80.0%</td><td data-label="Latency">1.8s</td></tr>
+                  <tr class="winner"><td>Super</td><td data-label="Exact">95.0%</td><td data-label="Precision">100.0%</td><td data-label="Recall">100.0%</td><td data-label="Latency">2.6s</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="score-note">Exact = correct four-way label. Precision = how often a threat alert was right. Recall = how many true threats were caught.</p>
+          </div>
+          <aside class="verdict">
+            <div class="big">SUPER</div>
+            <h3>Primary classifier</h3>
+            <p>It caught every malicious email in the spike and was only 0.8 seconds slower on average. That is a small latency cost for a major accuracy gain.</p>
+            <div class="stat-pair">
+              <div><strong>+20 pts</strong><span>THREAT RECALL VS NANO</span></div>
+              <div><strong>1.4×</strong><span>NANO→SUPER LATENCY</span></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="decisions">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Decisions locked</p>
+            <h2>Data, not vibes.</h2>
+          </div>
+          <p class="section-intro">Four findings now become design rules for the build.</p>
+        </div>
+        <div class="decisions">
+          <article class="decision"><div class="id">D1 / LINEUP</div><h3>Super goes first</h3><p>Nano's 80% threat recall means one in five threats slipped through. It cannot be the front door yet. Nano may re-audition on the larger real-email benchmark.</p></article>
+          <article class="decision"><div class="id">D2 / FAILURE MODE</div><h3>Never fail open</h3><p>Two Nano responses could not be parsed. In the real pipeline, malformed output triggers retry and escalation—it can never silently become “safe.”</p></article>
+          <article class="decision"><div class="id">D3 / TAXONOMY</div><h3>Separate threat from type</h3><p>Both models sometimes confused BEC with phishing while still recognizing danger. The verdict schema should distinguish “is it malicious?” from “which class?”</p></article>
+          <article class="decision"><div class="id">D4 / EMAIL TRUST</div><h3>Check five trust signals</h3><p>SPF checks approved senders, DKIM checks the message signature, and DMARC checks alignment and policy. BIMI adds brand-mark evidence; MTA-STS shows whether the domain publishes a secure inbound-mail policy. Each becomes evidence—not a verdict by itself.</p></article>
+        </div>
+        <div class="caveat"><b>BENCHMARK NOTE</b><p>Twenty synthetic emails are a compass, not a map. Phase 4 will retest on real, anonymized mail with label-leak fixes, injection tests, and reproducible scripts.</p></div>
+      </section>
+
+      <section class="section" id="architecture">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Architecture agreed</p>
+            <h2>Evidence before opinion.</h2>
+          </div>
+          <p class="section-intro">A hosted Python pipeline replaces the local workflow so judges can test a real public product.</p>
+        </div>
+        <div class="pipeline" aria-label="Planned product pipeline">
+          <article class="node active"><small>01 / INPUT</small><h3>Forward email</h3><p>Zero-install entry point for a judge or user.</p></article>
+          <article class="node active"><small>02 / EXTRACT</small><h3>Parse facts</h3><p>Sender, headers, links, message text, requested action.</p></article>
+          <article class="node active"><small>03 / EVIDENCE</small><h3>Check receipts</h3><p>Planned checks: SPF, DKIM and DMARC results; BIMI DNS/logo or VMC evidence; MTA-STS DNS declaration and published policy; plus lookalikes, RDAP age, Tavily intel and sender history.</p></article>
+          <article class="node active"><small>04 / CLASSIFY</small><h3>Ask Super</h3><p>Nemotron must reason from—and cite—the gathered evidence.</p></article>
+          <article class="node active"><small>05 / VALIDATE</small><h3>Return report</h3><p>Schema check, fail-safe retry, verdict page and reply.</p></article>
+        </div>
+        <div class="stack-swap">
+          <div class="swap"><s>n8n</s><strong>Python + FastAPI</strong></div>
+          <div class="swap"><s>Ollama + Claude</s><strong>Nemotron on Token Factory</strong></div>
+          <div class="swap"><s>Grounding only in Supabase</s><strong>Evidence layer + sender table</strong></div>
+          <div class="swap"><s>Model intuition</s><strong>Tavily threat-intel receipts</strong></div>
+        </div>
+      </section>
+
+      <section class="section dark" id="technical">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Technical record</p>
+            <h2>Exact steps from Day 1</h2>
+          </div>
+          <p class="section-intro">Secrets are deliberately represented by placeholders. Never paste a real key into the runbook or repository.</p>
+        </div>
+        <div class="tech-toolbar">
+          <button class="btn" id="copyTech" type="button">Copy technical log</button>
+          <button class="btn" id="downloadRunbook" type="button">Download runbook + repository</button>
+        </div>
+        <pre id="techLog" aria-label="Day 1 terminal commands"><span class="comment"># 1. Project environment</span>
+<span class="cmd">cd ~/Desktop/"Phishing Project Interview"/"NVIDIA Hackathon"</span>
+<span class="cmd">python3 -m venv .venv</span>
+<span class="cmd">source .venv/bin/activate</span>
+<span class="cmd">pip install requests python-dotenv</span>
+
+<span class="comment"># 2. Secret storage</span>
+<span class="cmd">nano .env</span>          <span class="comment"># NEBIUS_API_KEY=&lt;key&gt;</span>
+<span class="cmd">chmod 600 .env</span>     <span class="comment"># owner-only access</span>
+<span class="comment"># Added .env and .venv to .gitignore</span>
+
+<span class="comment"># 3. Verify live model IDs</span>
+<span class="cmd">curl -s https://api.tokenfactory.nebius.com/v1/models \</span>
+<span class="cmd">  -H "Authorization: Bearer $NEBIUS_API_KEY"</span>
+<span class="output"># → nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B</span>
+<span class="output"># → nvidia/nemotron-3-super-120b-a12b</span>
+
+<span class="comment"># 4. First inference used /v1/chat/completions</span>
+<span class="output"># → Nano: PHISHING on the paypa1 sample; 380 total tokens</span>
+
+<span class="comment"># 5. Build and run the spike</span>
+<span class="cmd">nano emails.json</span>  <span class="comment"># 20 labeled emails</span>
+<span class="cmd">nano spike.py</span>     <span class="comment"># classifier + 40-call loop + scorer</span>
+<span class="cmd">python spike.py</span>
+<span class="output"># → nano:  60.0% exact / 72.7% precision / 80.0% recall / 1.8s</span>
+<span class="output"># → super: 95.0% exact / 100% precision / 100% recall / 2.6s</span></pre>
+        <div class="toast" id="toast" aria-live="polite"></div>
+      </section>
+
+      <section class="section" id="repository">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Running work repository</p>
+            <h2>What we made, and why it exists</h2>
+          </div>
+          <p class="section-intro">This index stays in the runbook. Each build day adds files, tests, fixes, and decisions without erasing the earlier record.</p>
+        </div>
+        <div class="work-repo">
+          <div class="repo-manifest" aria-label="Day 1 project file manifest">
+            <article class="repo-item">
+              <code>.env</code>
+              <p>Holds the Nebius API key beside the code, never inside it. File permissions are owner-only with <code>chmod 600</code>.</p>
+              <span class="repo-tag safe">LOCAL ONLY</span>
+            </article>
+            <article class="repo-item">
+              <code>.gitignore</code>
+              <p>Excludes <code>.env</code> and <code>.venv</code> so secrets and machine-specific packages cannot enter the public Git history.</p>
+              <span class="repo-tag safe">COMMIT</span>
+            </article>
+            <article class="repo-item">
+              <code>.venv/</code>
+              <p>Isolated Python environment containing <code>requests</code> and <code>python-dotenv</code>; reproducible locally without altering macOS Python.</p>
+              <span class="repo-tag">DO NOT COMMIT</span>
+            </article>
+            <article class="repo-item">
+              <code>build-guide.md</code>
+              <p>Step-by-step build instructions for the hackathon pipeline. Corrected with the exact case-sensitive Nano model ID returned by the live models endpoint.</p>
+              <span class="repo-tag safe">COMMIT</span>
+            </article>
+            <article class="repo-item">
+              <code>emails.json</code>
+              <p>Balanced 20-email spike set: five phishing, five BEC, five legitimate, and five spam examples.</p>
+              <span class="repo-tag safe">TEST DATA</span>
+            </article>
+            <article class="repo-item">
+              <code>spike.py</code>
+              <p>Sends the same prompt and samples to Nano and Super, parses their labels, and scores exact accuracy, threat precision, recall, and latency.</p>
+              <span class="repo-tag safe">SOURCE</span>
+            </article>
+            <article class="repo-item">
+              <code>Runbook record</code>
+              <p>Keeps the commands, benchmark results, locked decisions, architecture, and this manifest together in the maintained project record.</p>
+              <span class="repo-tag safe">MAINTAIN</span>
+            </article>
+            <article class="repo-item">
+              <code>Exported HTML snapshot</code>
+              <p>Portable copy of this runbook for Sarab. It opens in a browser without publishing the live artifact; export a fresh snapshot after future build-day updates.</p>
+              <span class="repo-tag safe">SHAREABLE</span>
+            </article>
+          </div>
+          <aside class="repo-history" aria-label="Build history">
+            <h3>Build history</h3>
+            <article>
+              <time datetime="2026-09-28">SEP 28 · ACCESS</time>
+              <p>Created and secured the key, built the virtual environment, verified live model IDs, corrected the Nano ID in <code>build-guide.md</code>, and completed the first Nano inference.</p>
+            </article>
+            <article>
+              <time datetime="2026-09-28">SEP 28 · SPIKE</time>
+              <p>Built the 20-email test, ran 40 scored calls, selected Super, and recorded the fail-safe and two-part verdict decisions.</p>
+            </article>
+            <article>
+              <time datetime="2026-09-29">SEP 29 · EVIDENCE PLAN</time>
+              <p>Expanded the evidence layer to SPF, DKIM, DMARC, BIMI, and MTA-STS, with each signal supporting—but never deciding—the verdict.</p>
+            </article>
+            <article>
+              <time datetime="2026-09-29">SEP 29 · RUNBOOK</time>
+              <p>Added this persistent work repository so future updates can capture every file, test, fix, and decision in the same record.</p>
+            </article>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="roadmap">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Competition roadmap</p>
+            <h2>Five gates to submission</h2>
+          </div>
+          <p class="section-intro">Target submission: October 29, one day before the deadline.</p>
+        </div>
+        <div class="roadmap">
+          <article class="road-step done"><div class="rnum">PHASE 1 · GATE CROSSED</div><h3>Access + model spike</h3><time>Sep 28–Oct 1</time><p>Token Factory works. Nano and Super compared. Super selected.</p></article>
+          <article class="road-step"><div class="rnum">PHASE 2</div><h3>Skeleton live</h3><time>Oct 2–5</time><p>Public URL returns a real Nemotron verdict.</p></article>
+          <article class="road-step"><div class="rnum">PHASE 3</div><h3>Evidence + forward-to</h3><time>Oct 6–14</time><p>Forwarded email receives a verdict that cites evidence.</p></article>
+          <article class="road-step"><div class="rnum">PHASE 4</div><h3>Benchmark + harden</h3><time>Oct 15–21</time><p>Metrics reproduce; injection and label-leak issues are fixed.</p></article>
+          <article class="road-step"><div class="rnum">PHASE 5</div><h3>Polish + submit</h3><time>Oct 22–29</time><p>Public repo, demo URL, video, README, and update story ship.</p></article>
+        </div>
+        <div class="tomorrow">
+          <div class="label">NEXT / TUE SEP 29</div>
+          <div>
+            <h3>Close access chores, then sketch the skeleton.</h3>
+            <p>Join the hackathon on Devpost, create the project page, and finish the Builders Program signup for Token Factory credit. Then draw the Phase 2 shape—extract → classify → validate around Super, with FastAPI and a public URL—so October 2 starts as build day rather than design day.</p>
+            <ul>
+              <li>Avoid Nebius account changes during the recorded 5:00 AM–1:00 PM EDT maintenance window.</li>
+              <li>Keep the forward-to experience as the product moment; keep mailbox-wide relationship detection honestly out of v1.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <span>PHISHSQUAD × NEBIUS GLOBAL AI HACKATHON</span>
+        <span>DAY 1 RECORD · UPDATED SEP 29, 2026</span>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var links = Array.prototype.slice.call(document.querySelectorAll('nav a'));
+      var sections = links.map(function (link) { return document.querySelector(link.getAttribute('href')); }).filter(Boolean);
+      var toast = document.getElementById('toast');
+      var toastTimer;
+
+      function say(message) {
+        toast.textContent = message;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { toast.textContent = ''; }, 2800);
+      }
+
+      function setActive() {
+        var current = sections[0];
+        sections.forEach(function (section) {
+          if (section.getBoundingClientRect().top <= 150) current = section;
+        });
+        links.forEach(function (link) {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + current.id);
+        });
+      }
+      window.addEventListener('scroll', setActive, { passive: true });
+      setActive();
+
+      function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+        return new Promise(function (resolve, reject) {
+          var field = document.createElement('textarea');
+          field.value = text;
+          field.style.position = 'fixed';
+          field.style.opacity = '0';
+          document.body.appendChild(field);
+          field.select();
+          try { document.execCommand('copy') ? resolve() : reject(); }
+          catch (err) { reject(err); }
+          document.body.removeChild(field);
+        });
+      }
+
+      document.getElementById('copyTech').addEventListener('click', function () {
+        copyText(document.getElementById('techLog').innerText).then(function () {
+          say('Technical log copied.');
+        }).catch(function () { say('Copy unavailable in this view.'); });
+      });
+
+      var markdown = '# PhishSquad × Nebius Hackathon — Day 1\n\n' +
+        '**Date:** Monday, September 28, 2026  \n' +
+        '**Phase:** Access + model spike  \n' +
+        '**Decision:** Nemotron Super becomes the primary classifier.\n\n' +
+        '## What happened\n\n' +
+        'We created Nebius access, protected the API key in `.env`, set up a Python virtual environment, verified the live case-sensitive model IDs, and completed the first successful Nemotron inference. We then built a balanced 20-email spike and compared Nano with Super over 40 calls.\n\n' +
+        '## Results\n\n| Model | Exact | Precision | Recall | Avg latency |\n|---|---:|---:|---:|---:|\n| Nano | 60.0% | 72.7% | 80.0% | 1.8s |\n| Super | 95.0% | 100.0% | 100.0% | 2.6s |\n\n' +
+        '## Decisions\n\n1. Super is the primary classifier.\n2. Unparsed output must retry and escalate; it never passes as safe.\n3. The verdict schema will separate malicious-vs-benign from the exact threat type.\n4. The evidence layer will check SPF, DKIM, DMARC, BIMI, and MTA-STS, treating each as evidence rather than a verdict by itself.\n\n' +
+        '## Architecture\n\nForward email → extract facts → gather evidence → classify with Super → validate and return a report. Python/FastAPI replaces n8n; Nemotron replaces Ollama/Claude; the evidence layer and sender table replace grounding-only storage; Tavily provides public threat-intel evidence. Planned authentication checks include SPF, DKIM, DMARC, BIMI DNS/logo or VMC evidence, and the MTA-STS DNS declaration plus published policy.\n\n' +
+        '## Technical record\n\n```bash\n' + document.getElementById('techLog').innerText + '\n```\n\n' +
+        '## Work repository\n\n| Item | Purpose | Handling |\n|---|---|---|\n| `.env` | Holds the Nebius API key beside the code; permissions set with `chmod 600`. | Local only |\n| `.gitignore` | Excludes `.env` and `.venv` from Git history. | Commit |\n| `.venv/` | Isolated environment with `requests` and `python-dotenv`. | Do not commit |\n| `build-guide.md` | Step-by-step pipeline instructions, corrected with the exact live case-sensitive Nano model ID. | Commit |\n| `emails.json` | Balanced 20-email spike set: 5 phishing, 5 BEC, 5 legitimate, 5 spam. | Test data |\n| `spike.py` | Runs Nano and Super against the same set and scores exact accuracy, threat precision, recall, and latency. | Source |\n| Runbook record | Commands, results, decisions, architecture, manifest, and build history. | Maintain |\n| Exported HTML snapshot | Portable browser copy for Sarab; refresh it after future build-day updates. | Shareable |\n\n' +
+        '### Build history\n\n- **Sep 28 · Access:** Secured the key, built the virtual environment, verified model IDs, corrected the Nano ID in `build-guide.md`, and completed the first Nano inference.\n- **Sep 28 · Spike:** Ran 40 scored calls, selected Super, and locked the fail-safe and two-part verdict decisions.\n- **Sep 29 · Evidence plan:** Added SPF, DKIM, DMARC, BIMI, and MTA-STS as supporting evidence.\n- **Sep 29 · Runbook:** Added the running repository so future files, tests, fixes, and decisions remain in the same record.\n\n' +
+        '## Next\n\nJoin the Devpost hackathon, create the project page, finish the Builders Program signup, and sketch the Phase 2 FastAPI skeleton before the October 2 build starts.\n';
+
+      document.getElementById('downloadRunbook').addEventListener('click', function () {
+        var blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'phishsquad-runbook-and-work-repository.md';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        say('Runbook and work repository downloaded.');
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+[
+  {"label": "phishing", "text": "Subject: Urgent: Your account will be suspended\nDear Customer, we detected unusual activity. Verify your identity within 24 hours: http://paypa1-secure.com/login — PayPal Security Team"},
+  {"label": "phishing", "text": "Subject: Your BMO account has been locked\nDear client, unusual sign-in attempts were detected. Restore access now: http://bmo-secure-login.com/verify — BMO Security"},
+  {"label": "phishing", "text": "Subject: CRA: You are eligible for a $480 tax refund\nSubmit your direct deposit details to claim: http://cra-refund-gov.ca/claim — Canada Revenue Agency"},
+  {"label": "phishing", "text": "Subject: Action required: Netflix payment failed\nYour membership will be cancelled. Update billing: http://netflix-billing-update.com/reactivate — Netflix"},
+  {"label": "phishing", "text": "Subject: DHL: Customs fee due on your parcel\nPay $2.99 to release your package: http://dhl-express-delivery.net/pay — DHL Express"},
+  {"label": "bec", "text": "Subject: Quick request\nHi, are you at your desk? I need a confidential wire processed before 2pm. Reply only to this email, don't call. — Sent from my iPhone"},
+  {"label": "bec", "text": "Subject: Updated banking details\nHi, please note our remittance account changed. Use the attached new details for invoice #4481 due Friday. — Accounts, Northwind Supplies"},
+  {"label": "bec", "text": "Subject: Favor\nCan you grab 6 x $200 Apple gift cards for tomorrow's client event? Scratch and send me the codes, I'm in back-to-back meetings. Thanks!"},
+  {"label": "bec", "text": "Subject: Strictly confidential\nWe're closing an acquisition Friday. Please wire the deposit per the attached instructions and keep this between us. — External counsel"},
+  {"label": "bec", "text": "Subject: Payroll discrepancy\nYour direct deposit bounced. Confirm your account details by replying with your full banking info so we can re-issue. — HR Payroll"},
+  {"label": "legitimate", "text": "Subject: Your March statement is ready\nHi Shivoy, your March account statement is available in the secure document centre of your online banking. — TD Canada Trust"},
+  {"label": "legitimate", "text": "Subject: Team standup moved to 9:30\nHi all, moving tomorrow's standup to 9:30am. Same Meet link. — Priya"},
+  {"label": "legitimate", "text": "Subject: Subscription confirmed\nYou're subscribed to the Toronto AI Meetup newsletter. Manage preferences here any time. — Meetup Team"},
+  {"label": "legitimate", "text": "Subject: Password reset requested\nSomeone requested a reset for your account. If that was you, use the reset link in your banking app under Settings > Security. It expires in 30 minutes."},
+  {"label": "legitimate", "text": "Subject: Q3 roadmap draft\nHey, shared the Q3 roadmap doc with you: docs.google.com/document/d/1xY… — comments welcome by Friday. — Daniel"},
+  {"label": "spam", "text": "Subject: Rank #1 on Google in 30 days!!\nDear business owner, we guarantee first-page rankings. Reply for a free SEO audit. Unsubscribe anytime. — Apex SEO Pros"},
+  {"label": "spam", "text": "Subject: Your car warranty is expiring\nThis is your final notice to extend coverage before rates increase. Call now to renew. — Auto Protection Dept"},
+  {"label": "spam", "text": "Subject: You've won a 7-day Caribbean cruise!\nClaim your prize by calling our prize centre within 48 hours. Taxes and fees apply. — Prize Network"},
+  {"label": "spam", "text": "Subject: Lose 15 lbs in 3 weeks\nAll-natural metabolism drops, no diet needed. Order today, 50% off for new customers. — VitaTrim"},
+  {"label": "spam", "text": "Subject: Pharmacy deals — 80% off\nCialis, Viagra and more at unbeatable prices. No prescription needed. Discreet shipping. — MediDirect"}
+]
+
